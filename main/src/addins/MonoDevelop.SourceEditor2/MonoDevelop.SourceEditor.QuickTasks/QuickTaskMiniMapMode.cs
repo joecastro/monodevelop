@@ -124,7 +124,7 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 			{
 				if (button != 1)
 					return;
-				var ph = (int)(lineHeight * (TextEditor.GetTextEditorData ().VisibleLineCount + TextEditor.EditorLineThreshold));
+				var ph = (int)(lineHeight * (TextEditor.GetTextEditorData ().VisibleLineCount));
 				double position = vadjustment.Upper * (Math.Min (GetBufferYOffset () + y, ph) / (double)ph) - vadjustment.PageSize / 2;
 				position = Math.Max (vadjustment.Lower, Math.Min (position, vadjustment.Upper - vadjustment.PageSize));
 				vadjustment.Value = position;
@@ -133,7 +133,7 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 			protected override void OnSizeRequested (ref Requisition requisition)
 			{
 				base.OnSizeRequested (ref requisition);
-				requisition.Width = 164;
+				requisition.Width = 150;
 			}
 			
 			void DestroyBgBuffer ()
@@ -190,7 +190,7 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 			{
 				DestroyBgBuffer ();
 				curWidth = Allocation.Width;
-				curHeight = Math.Max (Allocation.Height, (int)(lineHeight * (TextEditor.GetTextEditorData ().VisibleLineCount + TextEditor.EditorLineThreshold)));
+				curHeight = Math.Max (Allocation.Height, (int)(lineHeight * (TextEditor.GetTextEditorData ().VisibleLineCount)));
 				if (GdkWindow == null || curWidth < 1 || curHeight < 1)
 					return;
 				backgroundPixbuf = new Pixmap (GdkWindow, curWidth, curHeight);
@@ -199,7 +199,7 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 				if (TextEditor.ColorStyle != null) {
 					using (var cr = Gdk.CairoHelper.Create (backgroundPixbuf)) {
 						cr.Rectangle (0, 0, curWidth, curHeight);
-						cr.Color = TextEditor.ColorStyle.Default.CairoBackgroundColor;
+						cr.Color = TextEditor.ColorStyle.PlainText.Background;
 						cr.Fill ();
 					}
 				}
@@ -229,10 +229,10 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 					int h = mode.backgroundBuffer.ClipRegion.Clipbox.Height;
 					cr.Rectangle (0, 0, w, h);
 					if (mode.TextEditor.ColorStyle != null)
-						cr.Color = mode.TextEditor.ColorStyle.Default.CairoBackgroundColor;
+						cr.Color = mode.TextEditor.ColorStyle.PlainText.Background;
 					cr.Fill ();
 					
-					maxLine = mode.TextEditor.GetTextEditorData ().VisibleLineCount + TextEditor.EditorLineThreshold;
+					maxLine = mode.TextEditor.GetTextEditorData ().VisibleLineCount;
 					sx = w / (double)mode.TextEditor.Allocation.Width;
 					sy = Math.Min (1, lineHeight * maxLine / (double)mode.TextEditor.GetTextEditorData ().TotalHeight );
 					cr.Scale (sx, sy);
@@ -306,16 +306,16 @@ namespace MonoDevelop.SourceEditor.QuickTasks
 					} else {
 						cr.Rectangle (0, 0, Allocation.Width, Allocation.Height);
 						if (TextEditor.ColorStyle != null)
-							cr.Color = TextEditor.ColorStyle.Default.CairoBackgroundColor;
+							cr.Color = TextEditor.ColorStyle.PlainText.Background;
 						cr.Fill ();
 					}
-					
+					/*
 					cr.Color = (HslColor)Style.Dark (State);
 					cr.MoveTo (-0.5, 0.5);
 					cr.LineTo (Allocation.Width, 0.5);
 					cr.MoveTo (-0.5, Allocation.Height - 0.5);
 					cr.LineTo (Allocation.Width, Allocation.Height - 0.5);
-					cr.Stroke ();
+					cr.Stroke ();*/
 
 					if (backgroundPixbuf != null) {
 						int y = GetBufferYOffset ();

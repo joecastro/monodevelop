@@ -47,7 +47,12 @@ namespace MonoDevelop.CSharp.Completion
 		IUnresolvedTypeDefinition  type;
 		
 		public bool GenerateBody { get; set; }
-		
+
+		public override TooltipInformation CreateTooltipInformation (bool smartWrap)
+		{
+			return MemberCompletionData.CreateTooltipInformation (ext, null, member, smartWrap);
+		}
+
 		public NewOverrideCompletionData (CSharpCompletionTextEditorExtension ext, int declarationBegin, IUnresolvedTypeDefinition type, IMember member) : base (null)
 		{
 			this.ext = ext;

@@ -38,6 +38,8 @@ using ICSharpCode.NRefactory.CSharp.TypeSystem;
 using ICSharpCode.NRefactory.CSharp.Resolver;
 using ICSharpCode.NRefactory.CSharp.Refactoring;
 using ICSharpCode.NRefactory.CSharp.Completion;
+using MonoDevelop.Ide.CodeCompletion;
+using Mono.TextEditor;
 
 namespace MonoDevelop.CSharp.Completion
 {
@@ -47,12 +49,21 @@ namespace MonoDevelop.CSharp.Completion
 		protected CSharpAmbience ambience = new CSharpAmbience ();
 		protected bool staticResolve = false;
 
+		ICompilation compilation;
+		CSharpUnresolvedFile file;
+
+
 		protected MethodParameterDataProvider (int startOffset, CSharpCompletionTextEditorExtension ext) : base (ext, startOffset)
 		{
+			compilation = ext.UnresolvedFileCompilation;
+			file = ext.CSharpUnresolvedFile;
 		}
 		
 		public MethodParameterDataProvider (int startOffset, CSharpCompletionTextEditorExtension ext, IEnumerable<IMethod> m) : base (ext, startOffset)
 		{
+			compilation = ext.UnresolvedFileCompilation;
+			file = ext.CSharpUnresolvedFile;
+
 			HashSet<string> alreadyAdded = new HashSet<string> ();
 			foreach (var method in m) {
 				if (method.IsConstructor)
@@ -74,22 +85,98 @@ namespace MonoDevelop.CSharp.Completion
 			methods.Add (method);
 		}
 		
-		static int MethodComparer (IMethod left, IMethod right)
+		protected static int MethodComparer (IMethod left, IMethod right)
 		{
+			bool lObs = left.IsObsolete ();
+			bool rObs = right.IsObsolete ();
+
+			if (lObs && !rObs)
+				return 1;
+			if (!lObs && rObs)
+				return -1;
+
 			var lstate = left.GetEditorBrowsableState ();
 			var rstate = right.GetEditorBrowsableState ();
-			if (lstate == rstate)
-				return left.Parameters.Count - right.Parameters.Count;
+			if (lstate == rstate) {
+				if (left.Parameters.Any (p => p.IsParams) && !right.Parameters.Any (p => p.IsParams))
+					return 1;
+				if (!left.Parameters.Any (p => p.IsParams) && right.Parameters.Any (p => p.IsParams))
+					return -1;
+				var cnt = left.Parameters.Where (p => !p.IsOptional).Count () - right.Parameters.Where (p => !p.IsOptional).Count ();
+				if (cnt == 0)
+					cnt = left.Parameters.Where (p => p.IsOptional).Count () - right.Parameters.Where (p => p.IsOptional).Count ();
+				return cnt;
+			}
 			return lstate.CompareTo (rstate);
 		}
+
+
+		public override MonoDevelop.Ide.CodeCompletion.TooltipInformation CreateTooltipInformation (int overload, int currentParameter, bool smartWrap)
+		{
+			return CreateTooltipInformation (ext, compilation, file, methods[overload], currentParameter, smartWrap);
+		}
+
+		public static TooltipInformation CreateTooltipInformation (CSharpCompletionTextEditorExtension ext, ICompilation compilation, CSharpUnresolvedFile file, IParameterizedMember entity, int currentParameter, bool smartWrap)
+		{
+			return CreateTooltipInformation (compilation, file, ext.TextEditorData, ext.FormattingPolicy, entity, currentParameter, smartWrap);
+		}
+
+		public static TooltipInformation CreateTooltipInformation (ICompilation compilation, CSharpUnresolvedFile file, TextEditorData textEditorData, MonoDevelop.CSharp.Formatting.CSharpFormattingPolicy formattingPolicy, IParameterizedMember entity, int currentParameter, bool smartWrap)
+		{
+			var tooltipInfo = new TooltipInformation ();
+			var resolver = file.GetResolver (compilation, textEditorData.Caret.Location);
+			var sig = new SignatureMarkupCreator (resolver, formattingPolicy.CreateOptions ());
+			sig.HighlightParameter = currentParameter;
+			sig.BreakLineAfterReturnType = smartWrap;
+			try {
+				tooltipInfo.SignatureMarkup = sig.GetMarkup (entity);
+			} catch (Exception e) {
+				LoggingService.LogError ("Got exception while creating markup for :" + entity, e);
+				return new TooltipInformation ();
+			}
+			tooltipInfo.SummaryMarkup = AmbienceService.GetSummaryMarkup (entity) ?? "";
+			
+			if (entity is IMethod) {
+				var method = (IMethod)entity;
+				if (method.IsExtensionMethod) {
+					tooltipInfo.AddCategory (GettextCatalog.GetString ("Extension Method from"), method.DeclaringTypeDefinition.FullName);
+				}
+			}
+			int paramIndex = currentParameter;
+
+			if (entity is IMethod && ((IMethod)entity).IsExtensionMethod)
+				paramIndex++;
+			paramIndex = Math.Min (entity.Parameters.Count - 1, paramIndex);
+
+			var curParameter = paramIndex >= 0  && paramIndex < entity.Parameters.Count ? entity.Parameters [paramIndex] : null;
+			if (curParameter != null) {
+
+				string docText = AmbienceService.GetDocumentation (entity);
+				if (!string.IsNullOrEmpty (docText)) {
+					string text = docText;
+					Regex paramRegex = new Regex ("(\\<param\\s+name\\s*=\\s*\"" + curParameter.Name + "\"\\s*\\>.*?\\</param\\>)", RegexOptions.Compiled);
+					Match match = paramRegex.Match (docText);
+					
+					if (match.Success) {
+						text = AmbienceService.GetDocumentationMarkup (entity, match.Groups [1].Value);
+						if (!string.IsNullOrWhiteSpace (text))
+							tooltipInfo.AddCategory (GettextCatalog.GetString ("Parameter"), text);
+					}
+				}
 		
+				if (curParameter.Type.Kind == TypeKind.Delegate)
+					tooltipInfo.AddCategory (GettextCatalog.GetString ("Delegate Info"), sig.GetDelegateInfo (curParameter.Type));
+			}
+			return tooltipInfo;
+		}
+
 		#region IParameterDataProvider implementation
 		
 		protected virtual string GetPrefix (IMethod method)
 		{
 			return GetShortType (method.ReturnType) + " ";
 		}
-		
+		/*
 		public override string GetHeading (int overload, string[] parameterMarkup, int currentParameter)
 		{
 			var flags = OutputFlags.ClassBrowserEntries | OutputFlags.IncludeMarkup | OutputFlags.IncludeGenerics;
@@ -193,7 +280,7 @@ namespace MonoDevelop.CSharp.Completion
 			var parameter = method.Parameters [paramIndex];
 
 			return GetParameterString (parameter);
-		}
+		}*/
 		
 		public override int GetParameterCount (int overload)
 		{
@@ -207,7 +294,12 @@ namespace MonoDevelop.CSharp.Completion
 				return method.Parameters.Count - 1;
 			return method.Parameters.Count;
 		}
-		
+
+		public override string GetParameterName (int overload, int paramIndex)
+		{
+			IMethod method = methods [overload];
+			return method.Parameters[paramIndex].Name;
+		}
 		public override bool AllowParameterList (int overload)
 		{
 			if (overload >= Count)

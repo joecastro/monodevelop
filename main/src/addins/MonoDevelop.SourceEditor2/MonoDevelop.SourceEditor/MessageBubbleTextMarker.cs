@@ -54,7 +54,7 @@ namespace MonoDevelop.SourceEditor
 		}
 	}
 
-	public class MessageBubbleTextMarker : TextMarker, IBackgroundMarker, IIconBarMarker, IExtendingTextMarker, IDisposable, IActionTextMarker
+	public class MessageBubbleTextMarker : TextLineMarker, IBackgroundMarker, IIconBarMarker, IExtendingTextLineMarker, IDisposable, IActionTextLineMarker
 	{
 		MessageBubbleCache cache;
 		
@@ -180,7 +180,7 @@ namespace MonoDevelop.SourceEditor
 			this.IsVisible = true;
 			this.lineSegment = lineSegment;
 			this.initialText = editor.Document.GetTextAt (lineSegment);
-			this.Flags = TextMarkerFlags.DrawsSelection;
+			this.Flags = TextLineMarkerFlags.DrawsSelection;
 			AddError (isError, errorMessage);
 //			cache.Changed += (sender, e) => CalculateLineFit (editor, lineSegment);
 		}
@@ -330,7 +330,7 @@ namespace MonoDevelop.SourceEditor
 		
 		public bool DrawBackground (TextEditor editor, Cairo.Context g, TextViewMargin.LayoutWrapper layout2, int selectionStart, int selectionEnd, int startOffset, int endOffset, double y, double startXPos, double endXPos, ref bool drawBg)
 		{
-			if (!IsVisible || DebuggingService.IsDebugging)
+			if (!IsVisible)
 				return true;
 			EnsureLayoutCreated (editor);
 			double x = editor.TextViewMargin.XOffset;
@@ -353,11 +353,11 @@ namespace MonoDevelop.SourceEditor
 			if (!fitsInSameLine) {
 				if (isEolSelected) {
 					x -= (int)editor.HAdjustment.Value;
-					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y + editor.LineHeight, editor.TextViewMargin.TextStartPosition, editor.LineHeight), editor.ColorStyle.Default.CairoBackgroundColor, true);
-					editor.TextViewMargin.DrawRectangleWithRuler (g, x + editor.TextViewMargin.TextStartPosition, new Cairo.Rectangle (x + editor.TextViewMargin.TextStartPosition, y + editor.LineHeight, editor.Allocation.Width + (int)editor.HAdjustment.Value, editor.LineHeight), editor.ColorStyle.Selection.CairoBackgroundColor, true);
+					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y + editor.LineHeight, editor.TextViewMargin.TextStartPosition, editor.LineHeight), editor.ColorStyle.PlainText.Background, true);
+					editor.TextViewMargin.DrawRectangleWithRuler (g, x + editor.TextViewMargin.TextStartPosition, new Cairo.Rectangle (x + editor.TextViewMargin.TextStartPosition, y + editor.LineHeight, editor.Allocation.Width + (int)editor.HAdjustment.Value, editor.LineHeight), editor.ColorStyle.SelectedText.Background, true);
 					x += (int)editor.HAdjustment.Value;
 				} else {
-					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y + editor.LineHeight, x2, editor.LineHeight), editor.ColorStyle.Default.CairoBackgroundColor, true);
+					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y + editor.LineHeight, x2, editor.LineHeight), editor.ColorStyle.PlainText.Background, true);
 				}
 			}
 			DrawRectangle (g, x, y, right, topSize);
@@ -580,7 +580,7 @@ namespace MonoDevelop.SourceEditor
 //				x2 = System.Math.Max (x2, fitsInSameLine ? editor.TextViewMargin.XOffset + editor.LineHeight / 2 : editor.TextViewMargin.XOffset);
 				
 				if (i > 0) {
-					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y, right, editor.LineHeight), isEolSelected ? editor.ColorStyle.Selection.CairoBackgroundColor : editor.ColorStyle.Default.CairoBackgroundColor, true);
+					editor.TextViewMargin.DrawRectangleWithRuler (g, x, new Cairo.Rectangle (x, y, right, editor.LineHeight), isEolSelected ? editor.ColorStyle.SelectedText.Background : editor.ColorStyle.PlainText.Background, true);
 					g.MoveTo (new Cairo.PointD (x2 + 0.5, y));
 					g.LineTo (new Cairo.PointD (x2 + 0.5, y + editor.LineHeight));
 					g.LineTo (new Cairo.PointD (right, y + editor.LineHeight));
@@ -634,8 +634,6 @@ namespace MonoDevelop.SourceEditor
 
 		public void DrawIcon (Mono.TextEditor.TextEditor editor, Cairo.Context cr, DocumentLine line, int lineNumber, double x, double y, double width, double height)
 		{
-			if (DebuggingService.IsDebugging)
-				return;
 			editor.GdkWindow.DrawPixbuf (cache.editor.Style.BaseGC (Gtk.StateType.Normal), 
 				errors.Any (e => e.IsError) ? cache.errorPixbuf : cache.warningPixbuf, 
 				0, 0, 
@@ -670,7 +668,7 @@ namespace MonoDevelop.SourceEditor
 			get {
 				int lineNumber = editor.Document.OffsetToLineNumber (lineSegment.Offset);
 				
-				double y = editor.LineToY (lineNumber) - (int)editor.VAdjustment.Value;
+				double y = editor.Allocation.Y + editor.LineToY (lineNumber) - (int)editor.VAdjustment.Value;
 				double height = editor.LineHeight * errors.Count;
 				if (!fitsInSameLine)
 					y += editor.LineHeight;
@@ -767,7 +765,7 @@ namespace MonoDevelop.SourceEditor
 
 		bool oldIsOver = false;
 
-		public void MouseHover (TextEditor editor, MarginMouseEventArgs args, TextMarkerHoverResult result)
+		public void MouseHover (TextEditor editor, MarginMouseEventArgs args, TextLineMarkerHoverResult result)
 		{
 			if (this.LineSegment == null)
 				return;

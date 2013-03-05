@@ -37,6 +37,7 @@ using MonoDevelop.CSharp.Completion;
 using MonoDevelop.CSharp.Refactoring;
 using MonoDevelop.CSharp.Parser;
 using MonoDevelop.Core;
+using ICSharpCode.NRefactory.CSharp.Completion;
 
 namespace MonoDevelop.CSharp.Formatting
 {
@@ -63,7 +64,14 @@ namespace MonoDevelop.CSharp.Formatting
 			var mimeTypeChain = DesktopService.GetMimeTypeInheritanceChain (CSharpFormatter.MimeType);
 			Format (policyParent, mimeTypeChain, data, startOffset, endOffset, exact);
 		}
-		
+
+		public static void FormatStatmentAt (MonoDevelop.Ide.Gui.Document data, DocumentLocation location)
+		{
+			var offset = data.Editor.LocationToOffset (location);
+			var policyParent = data.Project != null ? data.Project.Policies : PolicyService.DefaultPolicies;
+			var mimeTypeChain = DesktopService.GetMimeTypeInheritanceChain (CSharpFormatter.MimeType);
+			Format (policyParent, mimeTypeChain, data, offset, offset, false, true);
+		}		
 		
 		/// <summary>
 		/// Builds a compileable stub file out of an entity.
@@ -90,6 +98,11 @@ namespace MonoDevelop.CSharp.Formatting
 			var scope = pf.GetUsingScope (seg.Entity.Region.Begin);
 
 			while (scope != null && !string.IsNullOrEmpty (scope.NamespaceName)) {
+				// Hack: some syntax errors lead to invalid namespace names.
+				if (scope.NamespaceName.EndsWith ("<invalid>", StringComparison.Ordinal)) {
+					scope = scope.Parent;
+					continue;
+				}
 				sb.Append ("namespace Stub {");
 				sb.Append (data.Editor.EolMarker);
 				closingBrackets++;
@@ -107,8 +120,21 @@ namespace MonoDevelop.CSharp.Formatting
 			}
 
 			memberStartOffset = sb.Length;
-			sb.Append (data.Editor.GetTextBetween (seg.Offset, endOffset));
-			
+			var text = data.Editor.GetTextBetween (seg.Offset, endOffset);
+			sb.Append (text);
+
+			var lex = new CSharpCompletionEngineBase.MiniLexer (text);
+			lex.Parse (ch => {
+				if (lex.IsInString || lex.IsInChar || lex.IsInVerbatimString || lex.IsInSingleComment || lex.IsInMultiLineComment || lex.IsInPreprocessorDirective)
+					return;
+				if (ch =='{') {
+					closingBrackets++;
+				} else if (ch =='}') {
+					closingBrackets--;
+				}
+			});
+
+
 			// Insert at least caret column eol markers otherwise the reindent of the generated closing bracket
 			// could interfere with the current indentation.
 			var endLocation = data.Editor.OffsetToLocation (endOffset);
@@ -117,15 +143,14 @@ namespace MonoDevelop.CSharp.Formatting
 			}
 			sb.Append (data.Editor.EolMarker);
 			sb.Append (new string ('}', closingBrackets));
-			
 			return sb.ToString ();
 		}
 		
-		static AstFormattingVisitor GetFormattingChanges (PolicyContainer policyParent, IEnumerable<string> mimeTypeChain, MonoDevelop.Ide.Gui.Document document, string input, DomRegion formattingRegion)
+		static AstFormattingVisitor GetFormattingChanges (PolicyContainer policyParent, IEnumerable<string> mimeTypeChain, MonoDevelop.Ide.Gui.Document document, string input, DomRegion formattingRegion, ref int formatStartOffset, ref int formatLength, bool formatLastStatementOnly)
 		{
 			using (var stubData = TextEditorData.CreateImmutable (input)) {
 				stubData.Document.FileName = document.FileName;
-				var parser = document.HasProject ? new ICSharpCode.NRefactory.CSharp.CSharpParser (TypeSystemParser.GetCompilerArguments (document.Project)) : new ICSharpCode.NRefactory.CSharp.CSharpParser ();
+				var parser = document.HasProject ? new CSharpParser (TypeSystemParser.GetCompilerArguments (document.Project)) : new CSharpParser ();
 				var compilationUnit = parser.Parse (stubData);
 				bool hadErrors = parser.HasErrors;
 				if (hadErrors) {
@@ -134,7 +159,6 @@ namespace MonoDevelop.CSharp.Formatting
 						hadErrors = parser.HasErrors;
 					}
 				}
-				
 				// try it out, if the behavior is better when working only with correct code.
 				if (hadErrors) {
 					return null;
@@ -144,15 +168,29 @@ namespace MonoDevelop.CSharp.Formatting
 				
 				var formattingVisitor = new AstFormattingVisitor (policy.CreateOptions (), stubData.Document, document.Editor.CreateNRefactoryTextEditorOptions ()) {
 					HadErrors = hadErrors,
-					FormattingRegion = formattingRegion
 				};
+				formattingVisitor.AddFormattingRegion (formattingRegion);
 
 				compilationUnit.AcceptVisitor (formattingVisitor);
+
+				if (formatLastStatementOnly) {
+					AstNode node = compilationUnit.GetAdjacentNodeAt<Statement> (stubData.OffsetToLocation (formatStartOffset + formatLength - 1));
+					if (node != null) {
+						while (node.Role == Roles.EmbeddedStatement || node.Role == IfElseStatement.TrueRole || node.Role == IfElseStatement.FalseRole)
+							node = node.Parent;
+						var start = stubData.LocationToOffset (node.StartLocation);
+						if (start > formatStartOffset) {
+							var end = stubData.LocationToOffset (node.EndLocation);
+							formatStartOffset = start;
+							formatLength = end - start;
+						}
+					}
+				}
 				return formattingVisitor;
 			}
 		}
 		
-		public static void Format (PolicyContainer policyParent, IEnumerable<string> mimeTypeChain, MonoDevelop.Ide.Gui.Document data, int startOffset, int endOffset, bool exact)
+		public static void Format (PolicyContainer policyParent, IEnumerable<string> mimeTypeChain, MonoDevelop.Ide.Gui.Document data, int startOffset, int endOffset, bool exact, bool formatLastStatementOnly = false)
 		{
 			if (data.ParsedDocument == null)
 				return;
@@ -197,7 +235,7 @@ namespace MonoDevelop.CSharp.Formatting
 				realTextDelta = seg.Offset - formatStartOffset;
 			}
 			// Get changes from formatting visitor
-			var changes = GetFormattingChanges (policyParent, mimeTypeChain, data, text, formattingRegion);
+			var changes = GetFormattingChanges (policyParent, mimeTypeChain, data, text, formattingRegion, ref formatStartOffset, ref formatLength, formatLastStatementOnly);
 			if (changes == null)
 				return;
 

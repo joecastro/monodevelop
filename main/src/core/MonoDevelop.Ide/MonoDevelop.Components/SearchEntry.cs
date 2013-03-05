@@ -29,12 +29,15 @@
 
 using System;
 using Gtk;
+using MonoDevelop.Ide.Gui;
 
 namespace MonoDevelop.Components
 {
 	[System.ComponentModel.ToolboxItem(true)]
 	public class SearchEntry : EventBox
 	{
+		Alignment alignment;
+		Alignment entryAlignment;
 		private HBox box;
 		private Entry entry;
 		private HoverImageButton filter_button;
@@ -50,6 +53,10 @@ namespace MonoDevelop.Components
 
 		private event EventHandler filter_changed;
 		private event EventHandler entry_changed;
+		EventHandler activated_event;
+		bool roundedShape;
+		bool hasFrame = true;
+		bool customRoundedShapeDrawing = false;
 
 		public event EventHandler Changed {
 			add { entry_changed += value; }
@@ -57,8 +64,8 @@ namespace MonoDevelop.Components
 		}
 
 		public event EventHandler Activated {
-			add { entry.Activated += value; }
-			remove { entry.Activated -= value; }
+			add { activated_event += value; }
+			remove { activated_event -= value; }
 		}
 
 		public event EventHandler FilterChanged {
@@ -66,7 +73,7 @@ namespace MonoDevelop.Components
 			remove { filter_changed -= value; }
 		}
 		
-		bool forceFilterButtonVisible;
+		bool forceFilterButtonVisible = true;
 		public bool ForceFilterButtonVisible {
 			get {
 				return forceFilterButtonVisible; 
@@ -86,6 +93,24 @@ namespace MonoDevelop.Components
 			get { return this.entry; }
 		}
 
+		public bool HasFrame {
+			get { return hasFrame; }
+			set { hasFrame = value; QueueDraw (); }
+		}
+
+		public bool RoundedShape {
+			get { return roundedShape; }
+			set {
+				roundedShape = value;
+				if (value)
+					entry.Name = "search-entry";
+				else
+					entry.Name = "";
+				ShowHideButtons ();
+				QueueDraw ();
+			}
+		}
+
 		public SearchEntry ()
 		{
 			AppPaintable = true;
@@ -103,38 +128,56 @@ namespace MonoDevelop.Components
 				filter_button.Pixbuf = value;
 			}
 		}
-		
+
 		private void BuildWidget ()
 		{
+			alignment = new Alignment (0.5f, 0.5f, 1f, 0f);
+			alignment.SetPadding (1, 1, 3, 3);
+			VisibleWindow = false;
+
 			box = new HBox ();
 			entry = new FramelessEntry (this);
-			filter_button = new HoverImageButton (IconSize.Menu, new string[] { Stock.Find });
-			clear_button = new HoverImageButton (IconSize.Menu, new string[] { Stock.Clear });
-			
+			filter_button = new HoverImageButton (IconSize.Menu, "md-searchbox-search");
+			clear_button = new HoverImageButton (IconSize.Menu, "md-searchbox-clear");
+
+			entryAlignment = new Gtk.Alignment (0.5f, 0.5f, 1f, 1f);
+			alignment.SetPadding (0, 0, 3, 3);
+			entryAlignment.Add (entry);
 			box.PackStart (filter_button, false, false, 0);
-			box.PackStart (entry, true, true, 0);
+			box.PackStart (entryAlignment, true, true, 0);
 			box.PackStart (clear_button, false, false, 0);
-			Add (box);
-			box.ShowAll ();
+			alignment.Add (box);
+			Add (alignment);
+			alignment.ShowAll ();
 			
 			entry.StyleSet += OnInnerEntryStyleSet;
 			entry.StateChanged += OnInnerEntryStateChanged;
 			entry.FocusInEvent += OnInnerEntryFocusEvent;
 			entry.FocusOutEvent += OnInnerEntryFocusEvent;
 			entry.Changed += OnInnerEntryChanged;
-			
-			filter_button.Image.Xpad = 2;
-			clear_button.Image.Xpad = 2;
+			entry.Activated += delegate {
+				NotifyActivated ();
+			};
+
+			filter_button.Image.Xpad = 0;
+			clear_button.Image.Xpad = 0;
 			filter_button.CanFocus = false;
 			clear_button.CanFocus = false;
 			
 			filter_button.ButtonReleaseEvent += OnButtonReleaseEvent;
 			clear_button.ButtonReleaseEvent += OnButtonReleaseEvent;
 			clear_button.Clicked += OnClearButtonClicked;
-			
-			filter_button.Visible = false;
-			clear_button.Visible = false;
-			
+
+			ShowHideButtons ();
+		}
+
+		protected override void OnSizeRequested (ref Requisition requisition)
+		{
+			if (HeightRequest != -1 && box.HeightRequest != HeightRequest)
+				box.HeightRequest = HeightRequest;
+			if (box.HeightRequest != -1 && HeightRequest == -1)
+				box.HeightRequest = -1;
+			base.OnSizeRequested (ref requisition);
 		}
 
 		Gtk.EventBox statusLabelEventBox;
@@ -148,6 +191,12 @@ namespace MonoDevelop.Components
 			UpdateStyle ();
 			box.ShowAll ();
 			return statusLabelEventBox;
+		}
+
+		void NotifyActivated ()
+		{
+			if (activated_event != null)
+				activated_event (this, EventArgs.Empty);
 		}
 
 		private void BuildMenu ()
@@ -173,7 +222,10 @@ namespace MonoDevelop.Components
 		private void ShowHideButtons ()
 		{
 			clear_button.Visible = entry.Text.Length > 0;
+			entryAlignment.RightPadding = (uint) (!clear_button.Visible && roundedShape ? 6 : 0);
+
 			filter_button.Visible = ForceFilterButtonVisible || (menu != null && menu.Children.Length > 0);
+			entryAlignment.LeftPadding = (uint) (!filter_button.Visible && roundedShape ? 6 : 0);
 		}
 
 		private void OnPositionMenu (Menu menu, out int x, out int y, out bool push_in)
@@ -245,7 +297,15 @@ namespace MonoDevelop.Components
 			clear_button.ModifyBg (entry.State, color);
 			if (statusLabelEventBox != null)
 				statusLabelEventBox.ModifyBg (entry.State, color);
-			box.BorderWidth = (uint)entry.Style.XThickness;
+
+			box.BorderWidth = 0;
+			var h = entry.SizeRequest ().Height + entry.Style.Ythickness * 2;
+			var req = entry.SizeRequest ().Height;
+			req = Math.Max (req, filter_button.SizeRequest ().Height);
+			req = Math.Max (req, clear_button.SizeRequest ().Height);
+			var diff = h - req;
+			if (diff > 1)
+				box.BorderWidth = (uint)(diff / 2);
 		}
 
 		private void OnInnerEntryStyleSet (object o, StyleSetArgs args)
@@ -293,6 +353,7 @@ namespace MonoDevelop.Components
 		{
 			active_filter_id = 0;
 			entry.Text = String.Empty;
+			NotifyActivated ();
 		}
 		
 		protected override void OnDestroyed ()
@@ -309,6 +370,7 @@ namespace MonoDevelop.Components
 			if (evnt.Key == Gdk.Key.Escape) {
 				active_filter_id = 0;
 				entry.Text = String.Empty;
+				NotifyActivated ();
 				return true;
 			}
 			return base.OnKeyPressEvent (evnt);
@@ -316,12 +378,57 @@ namespace MonoDevelop.Components
 
 		protected override bool OnExposeEvent (Gdk.EventExpose evnt)
 		{
-			Style.PaintFlatBox (entry.Style, GdkWindow, State, ShadowType.None,
-				evnt.Area, this, "entry_bg", 0, 0, Allocation.Width, Allocation.Height);
+			var alloc = new Gdk.Rectangle (alignment.Allocation.X, box.Allocation.Y, alignment.Allocation.Width, box.Allocation.Height);
+
+			if (hasFrame && (!roundedShape || (roundedShape && !customRoundedShapeDrawing))) {
+				Style.PaintShadow (entry.Style, GdkWindow, StateType.Normal, ShadowType.In,
+				                   evnt.Area, entry, "entry", alloc.X, alloc.Y, alloc.Width, alloc.Height);
+/*				using (var ctx = Gdk.CairoHelper.Create (GdkWindow)) {
+					ctx.LineWidth = 1;
+					ctx.Rectangle (alloc.X + 0.5, alloc.Y + 0.5, alloc.Width - 1, alloc.Height - 1);
+					ctx.Color = new Cairo.Color (1,0,0);
+					ctx.Stroke ();
+				}*/
+			}
+			else if (!roundedShape) {
+				using (var ctx = Gdk.CairoHelper.Create (GdkWindow)) {
+					CairoExtensions.RoundedRectangle (ctx, alloc.X + 0.5, alloc.Y + 0.5, alloc.Width - 1, alloc.Height - 1, 4);
+					ctx.Color = entry.Style.Base (Gtk.StateType.Normal).ToCairoColor ();
+					ctx.Fill ();
+				}
+			}
+			else {
+				using (var ctx = Gdk.CairoHelper.Create (GdkWindow)) {
+					RoundBorder (ctx, alloc.X + 0.5, alloc.Y + 0.5, alloc.Width - 1, alloc.Height - 1);
+					ctx.Color = entry.Style.Base (Gtk.StateType.Normal).ToCairoColor ();
+					ctx.Fill ();
+				}
+			}
+
 			PropagateExpose (Child, evnt);
-			Style.PaintShadow (entry.Style, GdkWindow, StateType.Normal, ShadowType.In,
-				evnt.Area, entry, "entry", 0, 0, Allocation.Width, Allocation.Height);
+
+			if (hasFrame && roundedShape && customRoundedShapeDrawing) {
+				using (var ctx = Gdk.CairoHelper.Create (GdkWindow)) {
+					RoundBorder (ctx, alloc.X + 0.5, alloc.Y + 0.5, alloc.Width - 1, alloc.Height - 1);
+					ctx.Color = Styles.WidgetBorderColor;
+					ctx.LineWidth = 1;
+					ctx.Stroke ();
+				}
+			}
 			return true;
+		}
+
+		static void RoundBorder (Cairo.Context ctx, double x, double y, double w, double h)
+		{
+			double r = h / 2;
+			ctx.Arc (x + r, y + r, r, Math.PI / 2, Math.PI + Math.PI / 2);
+			ctx.LineTo (x + w - r, y);
+			
+			ctx.Arc (x + w - r, y + r, r, Math.PI + Math.PI / 2, Math.PI + Math.PI + Math.PI / 2);
+			
+			ctx.LineTo (x + r, y + h);
+			
+			ctx.ClosePath ();
 		}
 
 		protected override void OnShown ()
@@ -370,6 +477,13 @@ namespace MonoDevelop.Components
 			}
 			
 			filter_button.Visible = true;
+			return item;
+		}
+
+		public MenuItem AddMenuItem (string label)
+		{
+			var item = new MenuItem (label);
+			menu.Append (item);
 			return item;
 		}
 

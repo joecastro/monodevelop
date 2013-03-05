@@ -5,7 +5,9 @@ EXTRA_DIST = configure
 all: update_submodules all-recursive
 
 update_submodules:
-	git submodule update --init --recursive
+	if test -d ".git"; then \
+		git submodule update --init --recursive || exit 1; \
+	fi
 
 top_srcdir=.
 include $(top_srcdir)/config.make
@@ -77,6 +79,9 @@ dist: update_submodules remove-stale-tarballs dist-recursive
 
 run:
 	cd main && $(MAKE) run
+
+run-sgen:
+	cd main && $(MAKE) run-sgen
 
 run-gdb:
 	cd main && $(MAKE) run-gdb

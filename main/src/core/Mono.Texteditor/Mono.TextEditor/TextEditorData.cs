@@ -31,6 +31,7 @@ using System.IO;
 using System.Diagnostics;
 using Mono.TextEditor.Highlighting;
 using ICSharpCode.NRefactory.Editor;
+using Xwt.Drawing;
 
 namespace Mono.TextEditor
 {
@@ -41,9 +42,9 @@ namespace Mono.TextEditor
 	
 	public class TextEditorData : IDisposable
 	{
-		ITextEditorOptions options;
+		ITextEditorOptions    options;
 		readonly TextDocument document; 
-		Caret      caret;
+		readonly Caret        caret;
 		
 		static Adjustment emptyAdjustment = new Adjustment (0, 0, 0, 0, 0, 0);
 		
@@ -103,6 +104,18 @@ namespace Mono.TextEditor
 			protected set;
 		}
 
+		ISelectionSurroundingProvider selectionSurroundingProvider = new DefaultSelectionSurroundingProvider ();
+		public ISelectionSurroundingProvider SelectionSurroundingProvider {
+			get {
+				return selectionSurroundingProvider;
+			}
+			set {
+				if (value == null)
+					throw new ArgumentNullException ("surrounding provider needs to be != null");
+				selectionSurroundingProvider = value;
+			}
+		}
+
 		bool? customTabsToSpaces;
 		public bool TabsToSpaces {
 			get {
@@ -112,7 +125,34 @@ namespace Mono.TextEditor
 				customTabsToSpaces = value;
 			}
 		}
+		#region Tooltip providers
+		internal List<TooltipProvider> tooltipProviders = new List<TooltipProvider> ();
+		public IEnumerable<TooltipProvider> TooltipProviders {
+			get { return tooltipProviders; }
+		}
+
+		public void ClearTooltipProviders ()
+		{
+			foreach (var tp in tooltipProviders) {
+				var disposableProvider = tp as IDisposable;
+				if (disposableProvider == null)
+					continue;
+				disposableProvider.Dispose ();
+			}
+			tooltipProviders.Clear ();
+		}
 		
+		public void AddTooltipProvider (TooltipProvider provider)
+		{
+			tooltipProviders.Add (provider);
+		}
+		
+		public void RemoveTooltipProvider (TooltipProvider provider)
+		{
+			tooltipProviders.Remove (provider);
+		}
+		#endregion
+
 		public TextEditorData () : this (new TextDocument ())
 		{
 		}
@@ -229,7 +269,7 @@ namespace Mono.TextEditor
 		ColorScheme colorStyle;
 		public ColorScheme ColorStyle {
 			get {
-				return colorStyle ?? ColorScheme.Empty;
+				return colorStyle ?? Mono.TextEditor.Highlighting.SyntaxModeService.DefaultColorStyle;
 			}
 			set {
 				colorStyle = value;
@@ -247,17 +287,17 @@ namespace Mono.TextEditor
 			while (curOffset < offset + length && curOffset < Document.TextLength) {
 				DocumentLine line = Document.GetLineByOffset (curOffset);
 				int toOffset = System.Math.Min (line.Offset + line.Length, offset + length);
-				Stack<ChunkStyle> styleStack = new Stack<ChunkStyle> ();
-				foreach (var chunk in mode.GetChunks (ColorStyle, line, curOffset, toOffset - curOffset)) {
+				var styleStack = new Stack<ChunkStyle> ();
 
-					ChunkStyle chunkStyle = ColorStyle.GetChunkStyle (chunk);
-					bool setBold = chunkStyle.Bold && (styleStack.Count == 0 || !styleStack.Peek ().Bold) ||
-							!chunkStyle.Bold && (styleStack.Count == 0 || styleStack.Peek ().Bold);
-					bool setItalic = chunkStyle.Italic && (styleStack.Count == 0 || !styleStack.Peek ().Italic) ||
-							!chunkStyle.Italic && (styleStack.Count == 0 || styleStack.Peek ().Italic);
+				foreach (var chunk in mode.GetChunks (ColorStyle, line, curOffset, toOffset - curOffset)) {
+					var chunkStyle = ColorStyle.GetChunkStyle (chunk);
+					bool setBold = (styleStack.Count > 0 && styleStack.Peek ().FontWeight != chunkStyle.FontWeight) || 
+						chunkStyle.FontWeight != FontWeight.Normal;
+					bool setItalic = (styleStack.Count > 0 && styleStack.Peek ().FontStyle != chunkStyle.FontStyle) || 
+						chunkStyle.FontStyle != FontStyle.Normal;
 					bool setUnderline = chunkStyle.Underline && (styleStack.Count == 0 || !styleStack.Peek ().Underline) ||
 							!chunkStyle.Underline && (styleStack.Count == 0 || styleStack.Peek ().Underline);
-					bool setColor = styleStack.Count == 0 || TextViewMargin.GetPixel (styleStack.Peek ().Color) != TextViewMargin.GetPixel (chunkStyle.Color);
+					bool setColor = styleStack.Count == 0 || TextViewMargin.GetPixel (styleStack.Peek ().Foreground) != TextViewMargin.GetPixel (chunkStyle.Foreground);
 					if (setColor || setBold || setItalic || setUnderline) {
 						if (styleStack.Count > 0) {
 							result.Append ("</span>");
@@ -266,13 +306,13 @@ namespace Mono.TextEditor
 						result.Append ("<span");
 						if (useColors) {
 							result.Append (" foreground=\"");
-							result.Append (SyntaxMode.ColorToPangoMarkup (chunkStyle.Color));
+							result.Append (SyntaxMode.ColorToPangoMarkup (chunkStyle.Foreground));
 							result.Append ("\"");
 						}
-						if (chunkStyle.Bold)
-							result.Append (" weight=\"bold\"");
-						if (chunkStyle.Italic)
-							result.Append (" style=\"italic\"");
+						if (chunkStyle.FontWeight != Xwt.Drawing.FontWeight.Normal)
+							result.Append (" weight=\"" + chunkStyle.FontWeight + "\"");
+						if (chunkStyle.FontStyle != Xwt.Drawing.FontStyle.Normal)
+							result.Append (" style=\"" + chunkStyle.FontStyle + "\"");
 						if (chunkStyle.Underline)
 							result.Append (" underline=\"single\"");
 						result.Append (">");
@@ -876,6 +916,8 @@ namespace Mono.TextEditor
 			using (var undo = OpenUndoGroup ()) {
 				EnsureCaretIsNotVirtual ();
 				foreach (Selection selection in Selections) {
+					EnsureIsNotVirtual (selection.Anchor);
+					EnsureIsNotVirtual (selection.Lead);
 					var segment = selection.GetSelectionRange (this);
 					needUpdate |= Document.OffsetToLineNumber (segment.Offset) != Document.OffsetToLineNumber (segment.EndOffset);
 					DeleteSelection (selection);
@@ -1089,22 +1131,32 @@ namespace Mono.TextEditor
 		/// </summary>
 		public int EnsureCaretIsNotVirtual ()
 		{
+			return EnsureIsNotVirtual (Caret.Location);
+		}
+
+		int EnsureIsNotVirtual (DocumentLocation loc)
+		{
+			return EnsureIsNotVirtual (loc.Line, loc.Column);
+		}
+
+		int EnsureIsNotVirtual (int line, int column)
+		{
 			Debug.Assert (document.IsInAtomicUndo);
-			DocumentLine line = Document.GetLine (Caret.Line);
-			if (line == null)
+			DocumentLine documentLine = Document.GetLine (line);
+			if (documentLine == null)
 				return 0;
-			if (Caret.Column > line.Length + 1) {
+			if (column > documentLine.Length + 1) {
 				string virtualSpace;
-				if (HasIndentationTracker && line.Length == 0) {
-					virtualSpace = GetIndentationString (Caret.Location);
+				if (HasIndentationTracker && documentLine.Length == 0) {
+					virtualSpace = GetIndentationString (line, column);
 				} else {
-					virtualSpace = new string (' ', Caret.Column - 1 - line.Length);
+					virtualSpace = new string (' ', column - 1 - documentLine.Length);
 				}
 				var oldPreserve = Caret.PreserveSelection;
 				Caret.PreserveSelection = true;
-				Insert (Caret.Offset, virtualSpace);
+				Insert (documentLine.Offset, virtualSpace);
 				Caret.PreserveSelection = oldPreserve;
-			
+				
 				// No need to reposition the caret, because it's already at the correct position
 				// The only difference is that the position is not virtual anymore.
 				return virtualSpace.Length;
@@ -1277,12 +1329,7 @@ namespace Mono.TextEditor
 		#endregion
 		
 		#region Parent functions
-		public bool HasFocus {
-			get {
-				return Parent != null ? Parent.HasFocus : false;
-			}
-		}
-		
+
 		public void ScrollToCaret ()
 		{
 			if (Parent != null)

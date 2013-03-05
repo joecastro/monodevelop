@@ -1,5 +1,5 @@
-[submodule "main/external/Mono.Cecil"]
-	path = main/external/Mono.Cecil
+[submodule "main/external/cecil"]
+	path = main/external/cecil
 	url = git://github.com/mono/cecil.git
 [submodule "main/external/maccore"]
 	path = main/external/maccore
@@ -15,7 +15,19 @@
 	url = git://github.com/mono/ngit.git
 [submodule "main/external/mdtestharness"]
 	path = main/external/mdtestharness
-	url = git://github.com/alanmcgovern/mdtestharness.git
+	url = git://github.com/mono/mdtestharness.git
+[submodule "main/external/xwt"]
+	path = main/external/xwt
+	url = git://github.com/mono/xwt.git
+[submodule "main/external/Newtonsoft.Json"]
+	path = main/external/Newtonsoft.Json
+	url = git://github.com/mono/Newtonsoft.Json.git
 [submodule "main/external/nrefactory"]
 	path = main/external/nrefactory
 	url = git://github.com/icsharpcode/NRefactory.git
+[submodule "main/external/mono-addins"]
+	path = main/external/mono-addins
+	url = git://github.com/mono/mono-addins.git
+[submodule "main/external/ikvm"]
+	path = main/external/ikvm
+	url = git://github.com/mono/ikvm-fork.git

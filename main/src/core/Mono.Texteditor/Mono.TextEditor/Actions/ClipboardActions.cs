@@ -65,16 +65,19 @@ namespace Mono.TextEditor
 		public class CopyOperation
 		{
 			public const int TextType     = 1;
-			public const int RichTextType = 2;
-			public const int MonoTextType = 3;
-			
+			public const int HTMLTextType = 2;
+			public const int RichTextType = 3;
+
+			public const int MonoTextType = 99;
+
 			const int UTF8_FORMAT = 8;
 			
 			public static readonly Gdk.Atom CLIPBOARD_ATOM        = Gdk.Atom.Intern ("CLIPBOARD", false);
 			public static readonly Gdk.Atom PRIMARYCLIPBOARD_ATOM = Gdk.Atom.Intern ("PRIMARY", false);
 			public static readonly Gdk.Atom RTF_ATOM;
 			public static readonly Gdk.Atom MD_ATOM  = Gdk.Atom.Intern ("text/monotext", false);
-			
+			public static readonly Gdk.Atom HTML_ATOM;
+
 			public CopyOperation ()	
 			{
 			}
@@ -95,6 +98,9 @@ namespace Mono.TextEditor
 					break;
 				case RichTextType:
 					selection_data.Set (RTF_ATOM, UTF8_FORMAT, System.Text.Encoding.UTF8.GetBytes (RtfWriter.GenerateRtf (copiedDocument, mode, docStyle, options)));
+					break;
+				case HTMLTextType:
+					selection_data.Set (HTML_ATOM, UTF8_FORMAT, System.Text.Encoding.UTF8.GetBytes (HtmlWriter.GenerateHtml (copiedDocument, mode, docStyle, options)));
 					break;
 				case MonoTextType:
 					byte[] rawText = System.Text.Encoding.UTF8.GetBytes (monoDocument.Text);
@@ -129,20 +135,24 @@ namespace Mono.TextEditor
 			Mono.TextEditor.Highlighting.ISyntaxMode mode;
 
 			public static Gtk.TargetList targetList;
-			
+
 			static CopyOperation ()
 			{
 				if (Platform.IsMac) {
 					RTF_ATOM = Gdk.Atom.Intern ("NSRTFPboardType", false); //TODO: use public.rtf when dep on MacOS 10.6
+					const string NSHTMLPboardType = "Apple HTML pasteboard type";
+					HTML_ATOM = Gdk.Atom.Intern (NSHTMLPboardType, false);
 				} else {
 					RTF_ATOM = Gdk.Atom.Intern ("text/rtf", false);
+					HTML_ATOM = Gdk.Atom.Intern ("text/html", false);
 				}
-				
+
 				targetList = new Gtk.TargetList ();
+				targetList.Add (HTML_ATOM, /* FLAGS */0, HTMLTextType);
 				targetList.Add (RTF_ATOM, /* FLAGS */0, RichTextType);
 				targetList.Add (MD_ATOM, /* FLAGS */0, MonoTextType);
 				targetList.AddTextTargets (TextType);
-				
+
 				//HACK: work around gtk_selection_data_set_text causing crashes on Mac w/ QuickSilver, Clipbard History etc.
 				if (Platform.IsMac) {
 					targetList.Remove ("COMPOUND_TEXT");
@@ -260,8 +270,14 @@ namespace Mono.TextEditor
 						bool pasteLine = (selBytes [0] & 2) == 2;
 						
 //						var clearSelection = data.IsSomethingSelected ? data.MainSelection.SelectionMode != SelectionMode.Block : true;
-						using (var undo = data.OpenUndoGroup ()) {
-							if (pasteBlock) {
+						if (pasteBlock) {
+							using (var undo = data.OpenUndoGroup ()) {
+								var version = data.Document.Version;
+								if (!preserveSelection)
+									data.DeleteSelectedText (!data.IsSomethingSelected || data.MainSelection.SelectionMode != SelectionMode.Block);
+								data.EnsureCaretIsNotVirtual ();
+								insertionOffset = version.MoveOffsetTo (data.Document.Version, insertionOffset);
+
 								data.Caret.PreserveSelection = true;
 							
 								string[] lines = text.Split ('\r');
@@ -292,7 +308,13 @@ namespace Mono.TextEditor
 								if (!preserveState)
 									data.ClearSelection ();
 								data.Caret.PreserveSelection = false;
-							} else if (pasteLine) {
+							}
+						} else if (pasteLine) {
+							using (var undo = data.OpenUndoGroup ()) {
+								if (!preserveSelection)
+									data.DeleteSelectedText (!data.IsSomethingSelected || data.MainSelection.SelectionMode != SelectionMode.Block);
+								data.EnsureCaretIsNotVirtual ();
+
 								data.Caret.PreserveSelection = true;
 								result = text.Length;
 								DocumentLine curLine = data.Document.GetLine (data.Caret.Line);
@@ -300,9 +322,9 @@ namespace Mono.TextEditor
 								if (!preserveState)
 									data.ClearSelection ();
 								data.Caret.PreserveSelection = false;
-							} else {
-								result = PastePlainText (data, insertionOffset, text);
 							}
+						} else {
+							result = PastePlainText (data, insertionOffset, text, preserveSelection);
 						}
 					}
 				});
@@ -315,7 +337,7 @@ namespace Mono.TextEditor
 					if (string.IsNullOrEmpty (text))
 						return;
 					using (var undo = data.OpenUndoGroup ()) {
-						result = PastePlainText (data, insertionOffset, text);
+						result = PastePlainText (data, insertionOffset, text, preserveSelection);
 					}
 				});
 			}
@@ -323,16 +345,24 @@ namespace Mono.TextEditor
 			return result;
 		}
 
-		static int PastePlainText (TextEditorData data, int offset, string text)
+		static int PastePlainText (TextEditorData data, int offset, string text, bool preserveSelection = false)
 		{
-			int inserted = data.Insert (offset, text);
+			int inserted;
+			using (var undo = data.OpenUndoGroup ()) {
+				var version = data.Document.Version;
+				if (!preserveSelection)
+					data.DeleteSelectedText (!data.IsSomethingSelected || data.MainSelection.SelectionMode != SelectionMode.Block);
+				data.EnsureCaretIsNotVirtual ();
+				offset = version.MoveOffsetTo (data.Document.Version, offset);
+				inserted = data.Insert (offset, text);
+			}
 			data.PasteText (offset, text, inserted);
 			return inserted;
 		}
 		
 		public static int PasteFromPrimary (TextEditorData data, int insertionOffset)
 		{
-			var result = PasteFrom (Clipboard.Get (CopyOperation.PRIMARYCLIPBOARD_ATOM), data, false, insertionOffset, true);
+			var result = PasteFrom (Clipboard.Get (CopyOperation.PRIMARYCLIPBOARD_ATOM), data, true, insertionOffset, true);
 			data.Document.CommitLineUpdate (data.GetLineByOffset (insertionOffset));
 			return result;
 		}
@@ -341,11 +371,7 @@ namespace Mono.TextEditor
 		{
 			if (!data.CanEditSelection)
 				return;
-			using (var undo = data.OpenUndoGroup ()) {
-				data.DeleteSelectedText (!data.IsSomethingSelected || data.MainSelection.SelectionMode != SelectionMode.Block);
-				data.EnsureCaretIsNotVirtual ();
-				PasteFrom (Clipboard.Get (CopyOperation.CLIPBOARD_ATOM), data, true, data.IsSomethingSelected ? data.SelectionRange.Offset : data.Caret.Offset);
-			}
+			PasteFrom (Clipboard.Get (CopyOperation.CLIPBOARD_ATOM), data, false, data.IsSomethingSelected ? data.SelectionRange.Offset : data.Caret.Offset);
 		}
 	}
 }

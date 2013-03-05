@@ -153,7 +153,7 @@ namespace MonoDevelop.Debugger.Gdb
 						CompletionData data = new CompletionData ();
 						foreach (ObjectValue cv in val.GetAllChildren ())
 							data.Items.Add (new CompletionItem (cv.Name, cv.Flags));
-						data.ExpressionLenght = 0;
+						data.ExpressionLength = 0;
 						return data;
 					}
 					i++;
@@ -174,7 +174,7 @@ namespace MonoDevelop.Debugger.Gdb
 				string partialWord = exp.Substring (i+1);
 				
 				CompletionData cdata = new CompletionData ();
-				cdata.ExpressionLenght = partialWord.Length;
+				cdata.ExpressionLength = partialWord.Length;
 				
 				// Local variables
 				
@@ -238,14 +238,6 @@ namespace MonoDevelop.Debugger.Gdb
 			}
 			val.Name = name;
 			return val;
-		}
-
-		public bool HasChildren (ObjectPath path, EvaluationOptions options)
-		{
-			session.SelectThread (threadId);
-			GdbCommandResult res = session.RunCommand ("-var-info-num-children", path.Join ("."));
-
-			return res.GetInt ("numchild") > 0;
 		}
 
 		public ObjectValue[] GetChildren (ObjectPath path, int index, int count, EvaluationOptions options)

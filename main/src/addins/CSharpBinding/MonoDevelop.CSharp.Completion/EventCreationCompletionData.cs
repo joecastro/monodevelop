@@ -46,7 +46,13 @@ namespace MonoDevelop.CSharp.Completion
 		int initialOffset;
 		public bool AddSemicolon = true;
 		TextEditorData editor;
-		
+
+		public override TooltipInformation CreateTooltipInformation (bool smartWrap)
+		{
+			var tooltipInfo = new TooltipInformation ();
+			return tooltipInfo;
+		}
+
 		public EventCreationCompletionData (CSharpCompletionTextEditorExtension ext, string varName, IType delegateType, IEvent evt, string parameterList, IUnresolvedMember callingMember, IUnresolvedTypeDefinition declaringType) : base (null)
 		{
 			if (string.IsNullOrEmpty (varName)) {

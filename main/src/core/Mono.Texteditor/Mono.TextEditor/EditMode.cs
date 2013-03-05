@@ -103,15 +103,25 @@ namespace Mono.TextEditor
 		public virtual bool WantsToPreemptIM {
 			get { return false; }
 		}
-		
+
+		bool IsSpecialKeyForSelection (uint unicodeKey)
+		{
+			string start, end;
+			return textEditorData.SelectionSurroundingProvider.GetSelectionSurroundings (textEditorData, unicodeKey, out start, out end);
+		}
+
 		protected void InsertCharacter (uint unicodeKey)
 		{
 			if (!textEditorData.CanEdit (Data.Caret.Line))
 				return;
-			
+
 			HideMouseCursor ();
 
 			using (var undo = Document.OpenUndoGroup ()) {
+				if (textEditorData.IsSomethingSelected && textEditorData.Options.EnableSelectionWrappingKeys && IsSpecialKeyForSelection (unicodeKey)) {
+					textEditorData.SelectionSurroundingProvider.HandleSpecialSelectionKey (textEditorData, unicodeKey);
+					return;
+				}
 				textEditorData.DeleteSelectedText (
 					textEditorData.IsSomethingSelected ? textEditorData.MainSelection.SelectionMode != SelectionMode.Block : true);
 				// Needs to be called after delete text, delete text handles virtual caret postitions itself,
@@ -253,5 +263,13 @@ namespace Mono.TextEditor
 			if (editor != null)
 				editor.HideMouseCursor ();
 		}
+
+		#region TextAreaControl
+		public virtual void AllocateTextArea (TextEditor textEditor, TextArea textArea, Rectangle allocation)
+		{
+			if (textArea.Allocation != allocation)
+				textArea.SizeAllocate (allocation);
+		}
+		#endregion
 	}
 }

@@ -58,16 +58,7 @@ namespace MonoDevelop.SourceEditor
 			this.editor = editor;
 			tabAction = new TabAction (editor);
 		}
-		
-		public override string Status {
-			get { return base.Status; }
-			protected set {
-				base.Status = value;
-				// For the (recording) display.
-				IdeApp.Workbench.StatusBar.ShowMessage (base.Status);
-			}
-		}
-		
+
 		protected override Action<TextEditorData> GetInsertAction (Gdk.Key key, Gdk.ModifierType modifier)
 		{
 			if (modifier == Gdk.ModifierType.None) {
@@ -93,7 +84,7 @@ namespace MonoDevelop.SourceEditor
 					case 'q':	// :wq
 						editor.View.WorkbenchWindow.Document.Save ();
 						Gtk.Application.Invoke (delegate {
-							editor.View.WorkbenchWindow.CloseWindow (false, true, -1);
+							editor.View.WorkbenchWindow.CloseWindow (false/*, true, -1*/);
 						});
 						return "Saved and closed file.";
 					case '!':	// :w!
@@ -122,7 +113,7 @@ namespace MonoDevelop.SourceEditor
 					return "Document has not been saved!";
 
 				Gtk.Application.Invoke (delegate {
-					editor.View.WorkbenchWindow.CloseWindow (force, true, -1);
+					editor.View.WorkbenchWindow.CloseWindow (force/*, true, -1*/);
 				});
 				return force? "Closed file without saving.": "Closed file.";
 				

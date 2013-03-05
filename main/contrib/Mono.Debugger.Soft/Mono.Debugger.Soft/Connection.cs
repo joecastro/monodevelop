@@ -395,7 +395,7 @@ namespace Mono.Debugger.Soft
 		 * with newer runtimes, and vice versa.
 		 */
 		internal const int MAJOR_VERSION = 2;
-		internal const int MINOR_VERSION = 21;
+		internal const int MINOR_VERSION = 23;
 
 		enum WPSuspendPolicy {
 			NONE = 0,
@@ -462,7 +462,8 @@ namespace Mono.Debugger.Soft
 			ABORT_INVOKE = 9,
 			SET_KEEPALIVE = 10,
 			GET_TYPES_FOR_SOURCE_FILE = 11,
-			GET_TYPES = 12
+			GET_TYPES = 12,
+			INVOKE_METHODS = 13
 		}
 
 		enum CmdEvent {
@@ -540,7 +541,8 @@ namespace Mono.Debugger.Soft
 			GET_VALUES_2 = 14,
 			CMD_TYPE_GET_METHODS_BY_NAME_FLAGS = 15,
 			GET_INTERFACES = 16,
-			GET_INTERFACE_MAP = 17
+			GET_INTERFACE_MAP = 17,
+			IS_INITIALIZED = 18
 		}
 
 		enum BindingFlagsExtensions {
@@ -1022,6 +1024,7 @@ namespace Mono.Debugger.Soft
 		Thread receiver_thread;
 		Dictionary<int, byte[]> reply_packets;
 		Dictionary<int, ReplyCallback> reply_cbs;
+		Dictionary<int, int> reply_cb_counts;
 		object reply_packets_monitor;
 
 		internal event EventHandler<ErrorHandlerEventArgs> ErrorHandler;
@@ -1030,6 +1033,7 @@ namespace Mono.Debugger.Soft
 			closed = false;
 			reply_packets = new Dictionary<int, byte[]> ();
 			reply_cbs = new Dictionary<int, ReplyCallback> ();
+			reply_cb_counts = new Dictionary<int, int> ();
 			reply_packets_monitor = new Object ();
 		}
 		
@@ -1182,6 +1186,13 @@ namespace Mono.Debugger.Soft
 						if (cb == null) {
 							reply_packets [id] = packet;
 							Monitor.PulseAll (reply_packets_monitor);
+						} else {
+							int c = reply_cb_counts [id];
+							c --;
+							if (c == 0) {
+								reply_cbs.Remove (id);
+								reply_cb_counts.Remove (id);
+							}
 						}
 					}
 
@@ -1369,7 +1380,7 @@ namespace Mono.Debugger.Soft
 		}
 
 		/* Send a request and call cb when a result is received */
-		int Send (CommandSet command_set, int command, PacketWriter packet, Action<PacketReader> cb) {
+		int Send (CommandSet command_set, int command, PacketWriter packet, Action<PacketReader> cb, int count) {
 			int id = IdGenerator;
 
 			Stopwatch watch = null;
@@ -1390,6 +1401,7 @@ namespace Mono.Debugger.Soft
 					PacketReader r = new PacketReader (p);
 					cb.BeginInvoke (r, null, null);
 				};
+				reply_cb_counts [id] = count;
 			}
 
 			WritePacket (encoded_packet);
@@ -1582,7 +1594,38 @@ namespace Mono.Debugger.Soft
 
 						callback (v, exc, 0, state);
 					}
-				});
+				}, 1);
+		}
+
+		internal int VM_BeginInvokeMethods (long thread, long[] methods, ValueImpl this_arg, List<ValueImpl[]> arguments, InvokeFlags flags, InvokeMethodCallback callback, object state) {
+			// FIXME: Merge this with INVOKE_METHOD
+			var w = new PacketWriter ();
+			w.WriteId (thread);
+			w.WriteInt ((int)flags);
+			w.WriteInt (methods.Length);
+			for (int i = 0; i < methods.Length; ++i) {
+				w.WriteId (methods [i]);
+				w.WriteValue (this_arg);
+				w.WriteInt (arguments [i].Length);
+				w.WriteValues (arguments [i]);
+			}
+			return Send (CommandSet.VM, (int)CmdVM.INVOKE_METHODS, w, delegate (PacketReader r) {
+					ValueImpl v, exc;
+
+					if (r.ErrorCode != 0) {
+						callback (null, null, (ErrorCode)r.ErrorCode, state);
+					} else {
+						if (r.ReadByte () == 0) {
+							exc = r.ReadValue ();
+							v = null;
+						} else {
+							v = r.ReadValue ();
+							exc = null;
+						}
+
+						callback (v, exc, 0, state);
+					}
+				}, methods.Length);
 		}
 
 		internal void VM_AbortInvoke (long thread, int id)
@@ -2077,6 +2120,11 @@ namespace Mono.Debugger.Soft
 			}
 
 			return res;
+		}
+
+		internal bool Type_IsInitialized (long id) {
+			PacketReader r = SendReceive (CommandSet.TYPE, (int)CmdType.IS_INITIALIZED, new PacketWriter ().WriteId (id));
+			return r.ReadInt () == 1;
 		}
 
 		/*

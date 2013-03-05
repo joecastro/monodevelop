@@ -102,8 +102,12 @@ namespace MonoDevelop.AspNet.Mvc
 		protected override void Update (CommandInfo info)
 		{
 			var doc = IdeApp.Workbench.ActiveDocument;
+			if (doc == null || !(doc.Project is AspMvcProject)) {
+				info.Enabled = info.Visible = false;
+				return;
+			}
 			var rootFolder = doc.Project.BaseDirectory.Combine ("Views");
-			if (!(doc.Project is AspMvcProject) || !doc.FileName.ParentDirectory.IsChildPathOf (rootFolder))
+			if (!doc.FileName.ParentDirectory.IsChildPathOf (rootFolder))
 				info.Enabled = info.Visible = false;
 		}
 
@@ -125,7 +129,7 @@ namespace MonoDevelop.AspNet.Mvc
 		public static void Update (CommandInfo info)
 		{
 			var doc = IdeApp.Workbench.ActiveDocument;
-			if (!(doc.Project is AspMvcProject)) {
+			if (doc == null || !(doc.Project is AspMvcProject)) {
 				info.Enabled = info.Visible = false;
 				return;
 			}

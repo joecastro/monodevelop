@@ -41,8 +41,8 @@ namespace MonoDevelop.AspNet
 		
 		public AspNetSyntaxMode ()
 		{
-			ResourceXmlProvider provider = new ResourceXmlProvider (typeof(IXmlProvider).Assembly, "AspNetSyntaxMode.xml");
-			using (XmlReader reader = provider.Open ()) {
+			var provider = new ResourceStreamProvider (typeof(ResourceStreamProvider).Assembly, "AspNetSyntaxMode.xml");
+			using (var reader = provider.Open ()) {
 				SyntaxMode baseMode = SyntaxMode.Read (reader);
 				this.rules = new List<Rule> (baseMode.Rules);
 				this.keywords = new List<Keywords> (baseMode.Keywords);
@@ -72,8 +72,8 @@ namespace MonoDevelop.AspNet
 					Rule = "mode:" + language;
 					Begin = new Regex ("<%");
 					End = new Regex ("<%");
-					Color = "template";
-					TagColor = "template.tag";
+					Color = "Razor Code";
+					TagColor = "Html Server-Side Script";
 					StopAtEol = false;
 				}
 			}
@@ -86,7 +86,7 @@ namespace MonoDevelop.AspNet
 					Begin = new Regex ("<script");
 					End = new Regex ("</script");
 					Color = "";
-					TagColor = "text.markup.tag";
+					TagColor = "Xml Name";
 				}
 			}
 			
@@ -137,12 +137,12 @@ namespace MonoDevelop.AspNet
 			}
 
 			
-			protected override void ScanSpan (ref int i)
+			protected override bool ScanSpan (ref int i)
 			{
 				if (!spanStack.Any (s => s is CodeDeclarationSpan || s is CodeExpressionSpan) && i + 4 < doc.TextLength && doc.GetTextAt (i, 2) == "<%" && doc.GetTextAt (i, 4) != "<%--" && doc.GetCharAt (i + 2) != '@') {
 					var span = new CodeExpressionSpan (GetDefaultMime ());
-					FoundSpanBegin (span, i, "#$=:".IndexOf (doc.GetCharAt (i + 2)) >= 0 ? 3 : 2);
-					return;
+					FoundSpanBegin (span, i, 2);
+					return true;
 				}
 				
 				if (i > 0 && doc.GetCharAt (i) == '>') {
@@ -177,12 +177,12 @@ namespace MonoDevelop.AspNet
 						if (mime != null) {
 							CodeDeclarationSpan span = new CodeDeclarationSpan (mime);
 							FoundSpanBegin (span, i, 0);
-							return;
+							return true;
 						}
 					}
 				}
 				
-				base.ScanSpan (ref i);
+				return base.ScanSpan (ref i);
 			}
 			
 			protected override bool ScanSpanEnd (Mono.TextEditor.Highlighting.Span cur, ref int i)

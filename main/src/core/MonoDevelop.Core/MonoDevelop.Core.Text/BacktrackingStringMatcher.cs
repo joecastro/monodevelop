@@ -62,6 +62,23 @@ namespace MonoDevelop.Core.Text
 			}
 			var lane = GetMatch (name);
 			if (lane != null) {
+				if (name.Length == filterText.Length) {
+					matchRank = int.MaxValue;
+					for (int n = 0; n < name.Length; n++) {
+						if (filterText[n] != name[n])
+							matchRank--;
+					}
+					return true;
+				}
+				// exact named parameter case see discussion in bug #9114
+				if (name.Length - 1  == filterText.Length && name[name.Length - 1] == ':') {
+					matchRank = int.MaxValue - 1;
+					for (int n = 0; n < name.Length - 1; n++) {
+						if (filterText[n] != name[n])
+							matchRank--;
+					}
+					return true;
+				}
 				int capitalMatches = 0;
 				int nonCapitalMatches = 0;
 				int matching = 0;
@@ -83,11 +100,14 @@ namespace MonoDevelop.Core.Text
 						if (char.IsUpper (ch))
 							capitalMatches += Math.Max (1, 1000 - 100 * fragments);
 					} else {
-						var x = 100 * (i + 1) / (1 + fragments);
+						var x = 600  / (1 + fragments);
 						nonCapitalMatches += x;
 					}
 				}
-				matchRank = capitalMatches + matching - fragments + nonCapitalMatches;
+				matchRank = capitalMatches + matching - fragments + nonCapitalMatches + filterText.Length - name.Length;
+				// devalue named parameters.
+				if (name[name.Length - 1] == ':')
+					matchRank /= 2;
 				return true;
 			}
 			matchRank = int.MinValue;
@@ -109,8 +129,10 @@ namespace MonoDevelop.Core.Text
 			// filter char is no letter -> next char should match it - see Bug 674512 - Space doesn't commit generics
 			var flag = 1ul << i;
 			if ((filterIsNonLetter & flag) != 0) {
-				if (filterChar == text [j])
-					return j;
+				for (; j < text.Length; j++) {
+					if (filterChar == text [j])
+						return j;
+				}
 				return -1;
 			}
 			// letter case

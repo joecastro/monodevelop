@@ -7,15 +7,15 @@
        description = "The MonoDevelop IDE application."
        category    = "MonoDevelop Core"
        isroot      = "true"
-       version     = "3.1.0"
-       compatVersion = "2.9.0">
+       version     = "4.0"
+       compatVersion = "4.0">
 	
 	<Runtime>
 		<Import assembly="MonoDevelop.Ide.dll"/>
 	</Runtime>
 	
 	<Dependencies>
-		<Addin id="Core" version="3.1.0"/>
+		<Addin id="Core" version="4.0"/>
 	</Dependencies>
 
 	<!-- Extension ponts -->
@@ -159,17 +159,21 @@
 		<ExtensionNode name="Parser" type="MonoDevelop.Ide.TypeSystem.TypeSystemParserNode"/>
 	</ExtensionPoint>
 	
+	<ExtensionPoint path = "/MonoDevelop/TypeSystem/OutputTracking" name = "TypeSystemOutputTracker">
+		<ExtensionNode name="Track" type="MonoDevelop.Ide.TypeSystem.TypeSystemOutputTrackingNode"/>
+	</ExtensionPoint>
+	
 	<ExtensionPoint path = "/MonoDevelop/TypeSystem/FoldingParser">
-		<ExtensionNode name="Parser" type="MonoDevelop.Core.AddIns.MimeTypeExtensionNode"/>
+		<ExtensionNode name="Parser" type="MonoDevelop.Ide.Extensions.MimeTypeExtensionNode"/>
 	</ExtensionPoint>	
 
 	<ExtensionPoint path = "/MonoDevelop/TypeSystem/Ambiences" name = "Language ambiences">
 		<Description>Language ambiences. Specified classes must implement IAmbience.</Description>
-		<ExtensionNode name="Ambience" type="MonoDevelop.Core.AddIns.MimeTypeExtensionNode" />
+		<ExtensionNode name="Ambience" type="MonoDevelop.Ide.Extensions.MimeTypeExtensionNode" />
 	</ExtensionPoint>
 	
 	<ExtensionPoint path = "/MonoDevelop/TypeSystem/CodeGenerators">
-		<ExtensionNode name="Generator" type="MonoDevelop.Core.AddIns.MimeTypeExtensionNode"/>
+		<ExtensionNode name="Generator" type="MonoDevelop.Ide.Extensions.MimeTypeExtensionNode"/>
 	</ExtensionPoint>
 
 	<!-- Extensions -->
@@ -192,7 +196,6 @@
 	<Extension path = "/MonoDevelop/Ide/StartupHandlers">
 		<Class class = "MonoDevelop.Ide.Updater.UpdateCheckHandler"/>
 		<Class class = "MonoDevelop.Ide.Gui.Dialogs.TipOfTheDayStartup"/>
-		<Class class = "MonoDevelop.Ide.WelcomePage.WelcomePageStartUp"/>
 		<Class class = "MonoDevelop.Ide.LogReportingStartup"/>
 	</Extension>
 	
@@ -209,9 +212,6 @@
 	</Extension>
 	
 	<Extension path="/MonoDevelop/Ide/WorkbenchLayouts">
-		<Layout id="Default" _name="Default">
-			<LayoutPad id="ProjectPad" status="AutoHide" />
-		</Layout>
 		<Layout id="Solution" _name="Solution" />
 	</Extension>
 	
@@ -267,6 +267,8 @@
 	
 	<Extension path = "/MonoDevelop/Ide/Fonts">
 		<Font name ="Editor" _displayName="Text Editor" default ="_DEFAULT_MONOSPACE"/>
+		<Font name ="Pad" _displayName="Pads" default ="_DEFAULT_SANS"/>
+		<Font name ="OutputPad" _displayName="Output Pads" default ="_DEFAULT_MONOSPACE"/>
 	</Extension>
 	
 	<Extension path = "/MonoDevelop/Core/UserDataMigration">

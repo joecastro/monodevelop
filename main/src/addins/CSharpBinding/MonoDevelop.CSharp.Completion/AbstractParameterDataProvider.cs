@@ -36,26 +36,26 @@ using System.Linq;
 using ICSharpCode.NRefactory.CSharp.TypeSystem;
 using ICSharpCode.NRefactory.CSharp.Resolver;
 using ICSharpCode.NRefactory.CSharp.Refactoring;
+using MonoDevelop.Ide.CodeCompletion;
 
 namespace MonoDevelop.CSharp.Completion
 {
-	abstract class AbstractParameterDataProvider : IParameterDataProvider
+	abstract class AbstractParameterDataProvider : ParameterDataProvider
 	{
 		protected CSharpCompletionTextEditorExtension ext;
 
-		public AbstractParameterDataProvider (CSharpCompletionTextEditorExtension ext, int startOffset)
+		public AbstractParameterDataProvider (CSharpCompletionTextEditorExtension ext, int startOffset) : base (startOffset)
 		{
 			if (ext == null)
 				throw new ArgumentNullException ("ext");
 			this.ext = ext;
-			this.startOffset = startOffset;
 		}
 
 		TypeSystemAstBuilder builder = null;
 		protected string GetShortType (IType type)
 		{
 			if (builder == null) {
-				var ctx = ext.CSharpUnresolvedFile.GetTypeResolveContext (type.GetDefinition () == null ? ext.Document.Compilation : type.GetDefinition ().Compilation, ext.Document.Editor.Caret.Location) as CSharpTypeResolveContext;
+				var ctx = ext.CSharpUnresolvedFile.GetTypeResolveContext (ext.UnresolvedFileCompilation, ext.Document.Editor.Caret.Location) as CSharpTypeResolveContext;
 				var state = new CSharpResolver (ctx);
 				builder = new TypeSystemAstBuilder (state);
 				var dt = state.CurrentTypeDefinition;
@@ -91,24 +91,6 @@ namespace MonoDevelop.CSharp.Completion
 			return sb.ToString ();
 		}
 
-		#region IParameterDataProvider implementation
-		public abstract string GetHeading (int overload, string[] parameterDescription, int currentParameter);
-		public abstract string GetDescription (int overload, int currentParameter);
-		public abstract string GetParameterDescription (int overload, int paramIndex);
-
-		public abstract int GetParameterCount (int overload);
-		public abstract bool AllowParameterList (int overload);
-		public abstract int Count {
-			get;
-		}
-
-		readonly int startOffset;
-		int IParameterDataProvider.StartOffset {
-			get {
-				return startOffset;
-			}
-		}
-		#endregion
 	}
 }
 

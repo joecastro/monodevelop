@@ -46,9 +46,13 @@ namespace MonoDevelop.CSharp
 			Document.Editor.Caret.PositionChanged -= UpdatePath;
 			base.Dispose ();
 		}
+
+		bool isPathSet;
 		
 		public override void Initialize ()
 		{
+			CurrentPath = new PathEntry[] { new PathEntry (GettextCatalog.GetString ("No selection")) { Tag = null } };
+			isPathSet = false;
 			UpdatePath (null, null);
 			Document.Editor.Caret.PositionChanged += UpdatePath;
 			var ext = Document.GetContent<CSharpCompletionTextEditorExtension> ();
@@ -117,7 +121,34 @@ namespace MonoDevelop.CSharp
 					}
 				} 
 
-				memberList.Sort ((x, y) => String.Compare (GetName (x), GetName(y), StringComparison.OrdinalIgnoreCase));
+				memberList.Sort ((x, y) => {
+					var result = String.Compare (GetName (x), GetName(y), StringComparison.OrdinalIgnoreCase);
+					if (result == 0)
+						result = GetTypeParameters(x).CompareTo (GetTypeParameters(y));
+					if (result == 0)
+						result = GetParameters(x).CompareTo (GetParameters(y));
+
+					// partial methods without body should come last
+					if (result == 0 && x is MethodDeclaration && y is MethodDeclaration) {
+						var mx = x as MethodDeclaration;
+						var my = y as MethodDeclaration;
+						if (mx.Body.IsNull && !my.Body.IsNull)
+							return 1;
+						if (!mx.Body.IsNull && my.Body.IsNull)
+							return -1;
+					}
+					return result;
+				});
+			}
+
+			static int GetTypeParameters (AstNode x)
+			{
+				return x.GetChildrenByRole (Roles.TypeParameter).Count ();
+			}
+
+			static int GetParameters (AstNode x)
+			{
+				return x.GetChildrenByRole (Roles.Parameter).Count ();
 			}
 
 			string GetName (AstNode node)
@@ -174,9 +205,9 @@ namespace MonoDevelop.CSharp
 				string icon;
 				var node = memberList [n];
 				if (node is EntityDeclaration) {
-					icon = ((EntityDeclaration)node).GetStockIcon ();
+					icon = ((EntityDeclaration)node).GetStockIcon (false);
 				} else {
-					icon = ((EntityDeclaration)node.Parent).GetStockIcon ();
+					icon = ((EntityDeclaration)node.Parent).GetStockIcon (false);
 				}
 				return ImageService.GetPixbuf (icon, Gtk.IconSize.Menu);
 			}
@@ -281,9 +312,15 @@ namespace MonoDevelop.CSharp
 			return window;
 		}
 		
+		PathEntry[] currentPath;
 		public PathEntry[] CurrentPath {
-			get;
-			private set;
+			get {
+				return currentPath;
+			}
+			private set {
+				currentPath = value;
+				isPathSet = true;
+			}
 		}
 		
 		static PathEntry GetRegionEntry (ParsedDocument unit, Mono.TextEditor.DocumentLocation loc)
@@ -309,7 +346,7 @@ namespace MonoDevelop.CSharp
 			OnPathChanged (new DocumentPathChangedEventArgs (prev));	
 		}
 
-		TypeDeclaration lastType;
+		EntityDeclaration lastType;
 		string lastTypeMarkup;
 		EntityDeclaration lastMember;
 		string lastMemberMarkup;
@@ -334,15 +371,16 @@ namespace MonoDevelop.CSharp
 
 			var loc = Document.Editor.Caret.Location;
 
-			var curType = unit.GetNodeAt<TypeDeclaration> (loc);
+			var curType = (EntityDeclaration)unit.GetNodeAt (loc, n => n is TypeDeclaration || n is DelegateDeclaration);
 			var curMember = unit.GetNodeAt<EntityDeclaration> (loc);
 			if (curType == curMember)
 				curMember = null;
-			if (curType == lastType && lastMember == curMember)
+			if (isPathSet && curType == lastType && lastMember == curMember)
 				return;
+
 			var curTypeMakeup = GetEntityMarkup (curType);
 			var curMemberMarkup = GetEntityMarkup (curMember);
-			if (curType != null && lastType != null && curType.StartLocation == lastType.StartLocation && curTypeMakeup == lastTypeMarkup &&
+			if (isPathSet && curType != null && lastType != null && curType.StartLocation == lastType.StartLocation && curTypeMakeup == lastTypeMarkup &&
 			    curMember != null && lastMember != null && curMember.StartLocation == lastMember.StartLocation && curMemberMarkup == lastMemberMarkup)
 				return;
 
@@ -368,17 +406,17 @@ namespace MonoDevelop.CSharp
 				var type = curType;
 				while (type != null) {
 					var declaringType = type.Parent as TypeDeclaration;
-					result.Insert (0, new PathEntry (ImageService.GetPixbuf (type.GetStockIcon (), Gtk.IconSize.Menu), GetEntityMarkup (type)) { Tag = (AstNode)declaringType ?? unit });
+					result.Insert (0, new PathEntry (ImageService.GetPixbuf (type.GetStockIcon (false), Gtk.IconSize.Menu), GetEntityMarkup (type)) { Tag = (AstNode)declaringType ?? unit });
 					type = declaringType;
 				}
 			}
 				
 			if (curMember != null) {
-				result.Add (new PathEntry (ImageService.GetPixbuf (curMember.GetStockIcon (), Gtk.IconSize.Menu), curMemberMarkup) { Tag = curMember });
+				result.Add (new PathEntry (ImageService.GetPixbuf (curMember.GetStockIcon (true), Gtk.IconSize.Menu), curMemberMarkup) { Tag = curMember });
 				if (curMember is Accessor) {
 					var parent = curMember.Parent as EntityDeclaration;
 					if (parent != null)
-						result.Insert (result.Count - 1, new PathEntry (ImageService.GetPixbuf (parent.GetStockIcon (), Gtk.IconSize.Menu), GetEntityMarkup (parent)) { Tag = parent });
+						result.Insert (result.Count - 1, new PathEntry (ImageService.GetPixbuf (parent.GetStockIcon (true), Gtk.IconSize.Menu), GetEntityMarkup (parent)) { Tag = parent });
 				}
 			}
 				
@@ -389,7 +427,7 @@ namespace MonoDevelop.CSharp
 			PathEntry noSelection = null;
 			if (curType == null) {
 				noSelection = new PathEntry (GettextCatalog.GetString ("No selection")) { Tag = unit };
-			} else if (curMember == null) { 
+			} else if (curMember == null && !(curType is DelegateDeclaration)) { 
 				noSelection = new PathEntry (GettextCatalog.GetString ("No selection")) { Tag = curType };
 			}
 

@@ -6,22 +6,22 @@
        url         = "http://www.monodevelop.com"
        description = "Provides some IDE extensions useful for developing and building the Mono class libraries."
        category    = "Project Import and Export"
-       version     = "3.1.0">
+       version     = "4.0">
     
     <Runtime>
         <Import assembly="MonoDeveloperExtensions.dll"/>
     </Runtime>
-	
+
 	<Dependencies>
-		<Addin id="Core" version="3.1.0"/>
-		<Addin id="Ide" version="3.1.0"/>
+		<Addin id="Core" version="4.0"/>
+		<Addin id="Ide" version="4.0"/>
 	</Dependencies>
 
 	<Extension path = "/MonoDevelop/ProjectModel/FileFormats">
 		<FileFormat id = "MonoMakefile" name="Mono Makefile"
 						class = "MonoDeveloper.MonoMakefileFormat" />
 	</Extension>
-	
+
   <Extension path = "/MonoDevelop/ProjectModel/Gui/ItemOptionPanels">
     <Condition id="ItemType" value = "MonoDeveloper.MonoMakefile">
 		<Section id = "MonoMakefileOptionsPanel"
@@ -35,10 +35,6 @@
 				defaultHandler = "MonoDeveloper.InstallHandler"
 				icon = "gtk-network"
 				_label = "Install" />
-	</Extension>
-
-	<Extension path = "/MonoDevelop/Ide/Toolbar/Build">
-		<CommandItem id = "MonoDeveloper.Commands.Install" insertafter="MonoDevelop.Commands.ProjectCommands.Run"/>
 	</Extension>
 
 	<Extension path = "/MonoDevelop/Ide/ContextMenu/ProjectPad">
@@ -55,7 +51,7 @@
 	        <Import assembly="MonoDeveloperExtensions_nunit.dll"/>
 	    </Runtime>
 		<Dependencies>
-			<Addin id="NUnit" version="3.1.0"/>
+			<Addin id="NUnit" version="4.0"/>
 		</Dependencies>
 		<Extension path = "/MonoDevelop/NUnit/TestProviders">
 			<Class id = "MonoTestProvider" class = "MonoDeveloper.MonoTestProvider"/>

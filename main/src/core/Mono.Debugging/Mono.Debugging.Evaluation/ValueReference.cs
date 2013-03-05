@@ -185,11 +185,6 @@ namespace Mono.Debugging.Evaluation
 			Value = ctx.Adapter.FromRawValue (GetContext (options), value);
 		}
 
-		bool IObjectValueSource.HasChildren (ObjectPath path, EvaluationOptions options)
-		{
-			return HasChildren (path, options);
-		}
-
 		ObjectValue[] IObjectValueSource.GetChildren (ObjectPath path, int index, int count, EvaluationOptions options)
 		{
 			return GetChildren (path, index, count, options);
@@ -198,15 +193,6 @@ namespace Mono.Debugging.Evaluation
 		public virtual string CallToString ()
 		{
 			return ctx.Adapter.CallToString (ctx, Value);
-		}
-
-		public virtual bool HasChildren (ObjectPath path, EvaluationOptions options)
-		{
-			try {
-				return ctx.Adapter.ObjectValueHasChildren (GetChildrenContext (options), this, Value);
-			} catch (Exception ex) {
-				return false;
-			}
 		}
 
 		public virtual ObjectValue[] GetChildren (ObjectPath path, int index, int count, EvaluationOptions options)
@@ -232,7 +218,7 @@ namespace Mono.Debugging.Evaluation
 		
 		public IObjectSource ParentSource { get; internal set; }
 
-		EvaluationContext GetChildrenContext (EvaluationOptions options)
+		protected EvaluationContext GetChildrenContext (EvaluationOptions options)
 		{
 			EvaluationContext newCtx = ctx.Clone ();
 			if (options != null)
@@ -270,11 +256,9 @@ namespace Mono.Debugging.Evaluation
 				return new ArrayValueReference (ctx, obj, indices);
 			}
 			
-			if (ctx.Adapter.IsClassInstance (Context, obj)) {
-				ValueReference val = ctx.Adapter.GetMember (GetChildrenContext (options), this, Type, obj, name);
-				return val;
-			}
-					
+			if (ctx.Adapter.IsClassInstance (Context, obj))
+				return ctx.Adapter.GetMember (GetChildrenContext (options), this, obj, name);
+
 			return null;
 		}
 	}

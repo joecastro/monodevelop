@@ -30,13 +30,13 @@ using MonoDevelop.Ide;
 using Gtk;
 using Mono.TextEditor;
 using MonoDevelop.Ide.TypeSystem;
+using System.Text;
 
 namespace MonoDevelop.Components
 {
 	public class DropDownBoxListWindow : Window
 	{
-		HBox hBox;
-		VScrollbar vScrollbar;
+		ScrolledWindow vScrollbar;
 		internal ListWidget list;
 		
 		public IListDataProvider DataProvider {
@@ -51,7 +51,6 @@ namespace MonoDevelop.Components
 			this.TypeHint = Gdk.WindowTypeHint.Menu;
 			this.BorderWidth = 1;
 			this.Events |= Gdk.EventMask.KeyPressMask;
-			hBox = new HBox ();
 			list = new ListWidget (this);
 			list.SelectItem += delegate {
 				var sel = list.Selection;
@@ -60,64 +59,25 @@ namespace MonoDevelop.Components
 					Destroy ();
 				}
 			};
-			
-			list.ScrollEvent += HandleListScrollEvent;
-			list.SizeAllocated += delegate {
-				QueueResize ();
+			SetSizeRequest (list.WidthRequest, list.HeightRequest);
+			vScrollbar = new ScrolledWindow ();
+			vScrollbar.VScrollbar.SizeAllocated += (object o, SizeAllocatedArgs args) => {
+				var minWidth = list.WidthRequest + args.Allocation.Width;
+				if (this.Allocation.Width < minWidth)
+					SetSizeRequest (minWidth, list.HeightRequest);
 			};
-			list.PageChanged += HandleListPageChanged;
-			hBox.PackStart (list, true, true, 0);
-			
-			vScrollbar = new VScrollbar (null);
-			vScrollbar.ValueChanged += delegate {
-				list.ForcePage ((int)vScrollbar.Value);
-			};
-			
-			hBox.PackStart (vScrollbar, false, false, 0);
-			Add (hBox);
-			ShowAll ();
+			vScrollbar.Child = list;
+			var vbox = new VBox ();
+			vbox.PackStart (vScrollbar, true, true, 0);
+			Add (vbox);
 		}
 
-		void HandleListScrollEvent (object o, ScrollEventArgs args)
-		{
-			if (!vScrollbar.Visible)
-				return;
-			
-			var adj = vScrollbar.Adjustment;
-			var alloc = Allocation;
-			
-			//This widget is a special case because it's always aligned to items as it scrolls.
-			//Although this means we can't use the pixel deltas for true smooth scrolling, we 
-			//can still make use of the effective scrolling velocity by basing the calculation 
-			//on pixels and rounding to the nearest item.
-			
-			double dx, dy;
-			args.Event.GetPageScrollPixelDeltas (0, alloc.Height, out dx, out dy);
-			if (dy == 0)
-				return;
-			
-			var itemDelta = dy / (alloc.Height / adj.PageSize);
-			double discreteItemDelta = System.Math.Round (itemDelta);
-			if (discreteItemDelta == 0.0 && dy != 0.0)
-				discreteItemDelta = dy > 0? 1.0 : -1.0;
-			
-			adj.AddValueClamped (discreteItemDelta);
-			args.RetVal = true;
-		}
-
-		void HandleListPageChanged (object sender, EventArgs e)
-		{
-			vScrollbar.Value = list.Page;
-		}
-		
 		public void SelectItem (object item)
 		{
 			for (int i = 0; i < DataProvider.IconCount; i++) {
 				if (DataProvider.GetTag (i) == item) {
 					list.Selection = i;
-					list.Page = Math.Max (0, i - list.VisibleRows / 2);
-					vScrollbar.Value = list.Page;
-					QueueDraw ();
+					vScrollbar.Vadjustment.Value = Math.Max (0, i * list.RowHeight - vScrollbar.Vadjustment.PageSize / 2);
 					break;
 				}
 			}
@@ -136,83 +96,71 @@ namespace MonoDevelop.Components
 			Gdk.Pointer.Ungrab (Gtk.Global.CurrentEventTime);
 			base.OnUnmapped ();
 		}
-		
+
+		void SwitchToSeletedWord ()
+		{
+			string selection = list.WordSelection.ToString ();
+			for (int i = 0; i < DataProvider.IconCount; i++) {
+				if (DataProvider.GetMarkup (i).StartsWith (selection, StringComparison.OrdinalIgnoreCase)) {
+					list.Selection = i;
+					list.WordSelection.Append (selection);
+				}
+			} 
+		}
+
 		public bool ProcessKey (Gdk.Key key, Gdk.ModifierType modifier)
 		{
 			switch (key) {
-				case Gdk.Key.Up:
-					if (list.SelectionDisabled)
-						list.SelectionDisabled = false;
-					else
-						list.Selection --;
-					vScrollbar.Value = list.Page;
-					return true;
-					
-				case Gdk.Key.Down:
-					if (list.SelectionDisabled)
-						list.SelectionDisabled = false;
-					else
-						list.Selection ++;
-					vScrollbar.Value = list.Page;
-					return true;
-					
-				case Gdk.Key.Page_Up:
-					list.Selection -= list.VisibleRows - 1;
-					vScrollbar.Value = list.Page;
-					return true;
-					
-				case Gdk.Key.Page_Down:
-					list.Selection += list.VisibleRows - 1;
-					vScrollbar.Value = list.Page;
-					return true;
+			case Gdk.Key.Up:
+				if (list.SelectionDisabled)
+					list.SelectionDisabled = false;
+				else
+					list.Selection --;
+				return true;
 				
-				case Gdk.Key.Home:
-					vScrollbar.Value = list.Selection = (int)vScrollbar.Adjustment.Lower;
-					return true;
+			case Gdk.Key.Down:
+				if (list.SelectionDisabled)
+					list.SelectionDisabled = false;
+				else
+					list.Selection ++;
+				return true;
 				
-				case Gdk.Key.End:
-					vScrollbar.Value = (int)vScrollbar.Adjustment.Upper;
-					list.Selection = DataProvider.IconCount;
-					return true;
-								
-				case Gdk.Key.Return:
-				case Gdk.Key.ISO_Enter:
-				case Gdk.Key.Key_3270_Enter:
-				case Gdk.Key.KP_Enter:
-					list.OnSelectItem (EventArgs.Empty);
-					return true;
+			case Gdk.Key.Page_Up:
+				list.Selection -= list.VisibleRows - 1;
+				return true;
+				
+			case Gdk.Key.Page_Down:
+				list.Selection += list.VisibleRows - 1;
+				return true;
+
+			case Gdk.Key.Home:
+				list.Selection = (int)0;
+				return true;
+			
+			case Gdk.Key.End:
+				list.Selection = DataProvider.IconCount;
+				return true;
+							
+			case Gdk.Key.Escape:
+				Destroy ();
+				return true;
+				
+			case Gdk.Key.Return:
+			case Gdk.Key.ISO_Enter:
+			case Gdk.Key.Key_3270_Enter:
+			case Gdk.Key.KP_Enter:
+				list.OnSelectItem (EventArgs.Empty);
+				return true;
+			default:
+				char ch = (char)key;
+				if (char.IsLetterOrDigit (ch)) {
+					list.WordSelection.Append (ch);
+					SwitchToSeletedWord ();
+				}
+				break;
 			}
 			
 			return false;
-		}
-		
-		protected override void OnSizeRequested (ref Requisition requisition)
-		{
-			base.OnSizeRequested (ref requisition);
-			var upper = Math.Max (0, DataProvider.IconCount);
-			var pageStep = list.VisibleRows;
-			vScrollbar.Adjustment.SetBounds (0, upper, 1, pageStep, pageStep);
-			
-			if (list.VisibleRows >= DataProvider.IconCount && vScrollbar.Parent == hBox)
-				hBox.Remove (vScrollbar);
-		
-			requisition.Height = this.list.HeightRequest + 2;
-			int width;
-			if (WidthRequest >= 0) {
-				width = WidthRequest;
-			} else {
-				width = this.list.CalcWidth ();
-				if (list.VisibleRows < DataProvider.IconCount)
-					width += vScrollbar.Allocation.Width;
-			}
-			requisition.Width = width;
-		}
-
-		protected override bool OnExposeEvent (Gdk.EventExpose args)
-		{
-			bool result = base.OnExposeEvent (args);
-			args.Window.DrawRectangle (Style.MidGC (Gtk.StateType.Normal), false, 0, 0, this.Allocation.Width - 1, this.Allocation.Height - 1);
-			return result;
 		}
 
 		protected override bool OnFocusOutEvent (Gdk.EventFocus evnt)
@@ -242,9 +190,15 @@ namespace MonoDevelop.Components
 			Pango.Layout layout;
 			DropDownBoxListWindow win;
 			int selection = 0;
-			int page = 0;
-			
+
 			int rowHeight;
+
+			public int RowHeight {
+				get {
+					return rowHeight;
+				}
+			}
+
 		//	bool buttonPressed;
 			bool disableSelection;
 	
@@ -256,6 +210,7 @@ namespace MonoDevelop.Components
 				this.Events = Gdk.EventMask.ButtonPressMask | Gdk.EventMask.ButtonReleaseMask | Gdk.EventMask.PointerMotionMask | Gdk.EventMask.LeaveNotifyMask;
 				layout = new Pango.Layout (this.PangoContext);
 				CalcRowHeight ();
+				CalcVisibleRows ();
 			}
 			
 			void CalcRowHeight ()
@@ -264,6 +219,7 @@ namespace MonoDevelop.Components
 				int rowWidth;
 				layout.GetPixelSize (out rowWidth, out rowHeight);
 				rowHeight += padding;
+				SetBounds (Allocation);
 			}
 			
 			protected override bool OnLeaveNotifyEvent (Gdk.EventCrossing evnt)
@@ -294,8 +250,7 @@ namespace MonoDevelop.Components
 					selection = -1;
 				else
 					selection = 0;
-	
-				page = 0;
+				CalcVisibleRows ();
 				disableSelection = false;
 				if (IsRealized) {
 					UpdateStyle ();
@@ -303,7 +258,14 @@ namespace MonoDevelop.Components
 				}
 				if (SelectionChanged != null) SelectionChanged (this, EventArgs.Empty);
 			}
-			
+			StringBuilder wordSelection = new StringBuilder ();
+
+			public StringBuilder WordSelection {
+				get {
+					return wordSelection;
+				}
+			}
+
 			public int Selection
 			{
 				get {
@@ -311,6 +273,7 @@ namespace MonoDevelop.Components
 				}
 				
 				set {
+					wordSelection.Length = 0;
 					var newValue = Math.Max (0, Math.Min (value, win.DataProvider.IconCount - 1));
 					
 					if (newValue != selection) {
@@ -330,17 +293,14 @@ namespace MonoDevelop.Components
 			
 			void UpdatePage ()
 			{
-				if (!IsRealized) {
-					page = 0;
+				var area = GetRowArea (selection);
+				if (area.Y < vadj.Value) {
+					vadj.Value = area.Y;
 					return;
 				}
-				
-				if (selection < page || selection >= page + VisibleRows) {
-					page = selection - (VisibleRows / 2);
-					if (page < 0) 
-						page = 0;
+				if (vadj.Value + Allocation.Height < area.Bottom) {
+					vadj.Value = System.Math.Max (0, area.Bottom - vadj.PageSize + 1);
 				}
-				Page = System.Math.Max (0, System.Math.Min (page, win.DataProvider.IconCount - VisibleRows));
 			}
 			
 			public bool SelectionDisabled {
@@ -350,37 +310,7 @@ namespace MonoDevelop.Components
 					this.QueueDraw ();
 				}
 			}
-			
-			public int Page {
-				get { 
-					return page; 
-				}
-				set {
-					if (page == value)
-						return;
-					page = value;
-					UpdatePage ();
-					OnPageChanged (EventArgs.Empty);
-					this.QueueDraw ();
-				}
-			}
-			
-			internal void ForcePage (int page)
-			{
-				this.page = System.Math.Max (0, System.Math.Min (page, win.DataProvider.IconCount - VisibleRows));
-				OnPageChanged (EventArgs.Empty);
-				this.QueueDraw ();
-			}
-			
-			protected virtual void OnPageChanged (EventArgs e)
-			{
-				EventHandler handler = this.PageChanged;
-				if (handler != null)
-					handler (this, e);
-			}
-			
-			public event EventHandler PageChanged;
-			
+
 			protected override bool OnButtonPressEvent (Gdk.EventButton e)
 			{
 				Selection = GetRowByPosition ((int) e.Y);
@@ -421,7 +351,7 @@ namespace MonoDevelop.Components
 			{
 				base.OnExposeEvent (args);
 				DrawList ();
-				return true;
+				return false;
 			}
 	
 			void DrawList ()
@@ -433,12 +363,12 @@ namespace MonoDevelop.Components
 				int lineWidth = winWidth - margin * 2;
 				int xpos = margin + padding;
 
-				int n = 0;
-				while (ypos < winHeight - margin && (page + n) < win.DataProvider.IconCount) {
-					string text = win.DataProvider.GetMarkup (page + n) ?? "&lt;null&gt;";
+				int n = (int)(vadj.Value / rowHeight);
+				while (ypos < winHeight - margin && n < win.DataProvider.IconCount) {
+					string text = win.DataProvider.GetMarkup (n) ?? "&lt;null&gt;";
 					layout.SetMarkup (text);
 
-					Gdk.Pixbuf icon = win.DataProvider.GetIcon (page + n);
+					Gdk.Pixbuf icon = win.DataProvider.GetIcon (n);
 					int iconHeight = icon != null ? icon.Height : 24;
 					int iconWidth = icon != null ? icon.Width : 0;
 
@@ -462,7 +392,7 @@ namespace MonoDevelop.Components
 					typos = he < rowHeight ? ypos + (rowHeight - he) / 2 : ypos;
 					iypos = iconHeight < rowHeight ? ypos + (rowHeight - iconHeight) / 2 : ypos;
 					
-					if (page + n == selection) {
+					if (n == selection) {
 						if (!disableSelection) {
 							this.GdkWindow.DrawRectangle (this.Style.BaseGC (StateType.Selected), 
 							                              true, margin, ypos, lineWidth, he + padding);
@@ -492,16 +422,12 @@ namespace MonoDevelop.Components
 			
 			int GetRowByPosition (int ypos)
 			{
-				return page + (ypos-margin) / rowHeight;
+				return (int)(vadj.Value + ypos) / rowHeight;
 			}
-			
+
 			public Gdk.Rectangle GetRowArea (int row)
 			{
-				row -= page;
-				int winWidth, winHeight;
-				this.GdkWindow.GetSize (out winWidth, out winHeight);
-				
-				return new Gdk.Rectangle (margin, margin + rowHeight * row, winWidth, rowHeight);
+				return new Gdk.Rectangle (0, row * rowHeight, Allocation.Width, rowHeight - 1);
 			}
 			
 			public int VisibleRows {
@@ -509,27 +435,22 @@ namespace MonoDevelop.Components
 					return Allocation.Height / rowHeight;
 				}
 			}
-			
+
+			const int maxVisibleRows = 8;
 			void CalcVisibleRows ()
 			{
-				Gdk.Rectangle geometry = DesktopService.GetUsableMonitorGeometry (Screen, Screen.GetMonitorAtWindow (GdkWindow));
-				int winHeight = geometry.Height / 2;
 				int lvWidth, lvHeight;
 				this.GetSizeRequest (out lvWidth, out lvHeight);
 				if (layout == null)
 					return;
-				
-				int visibleRows = (winHeight + padding - margin * 2) / rowHeight;
+
 				int newHeight;
-	
-				if (this.win.DataProvider.IconCount > visibleRows)
-					newHeight = (rowHeight * visibleRows) + margin * 2;
+				if (this.win.DataProvider.IconCount > maxVisibleRows)
+					newHeight = (rowHeight * maxVisibleRows) + margin * 2;
 				else
 					newHeight = (rowHeight * this.win.DataProvider.IconCount) + margin * 2;
-				
-				if (lvWidth != listWidth || lvHeight != newHeight) {
-					this.SetSizeRequest (listWidth, newHeight);
-				}
+				listWidth = Math.Min (450, CalcWidth ());
+				this.SetSizeRequest (listWidth, newHeight);
 			} 
 			internal int CalcWidth ()
 			{
@@ -554,9 +475,27 @@ namespace MonoDevelop.Components
 				return w;
 			}
 
+			void SetBounds (Gdk.Rectangle allocation)
+			{
+				if (vadj == null)
+					return;
+				var h = allocation.Height;
+				var height = Math.Max (h, rowHeight * win.DataProvider.IconCount);
+				if (this.win.DataProvider.IconCount < maxVisibleRows) {
+					vadj.SetBounds (0, h, 0, 0, h);
+				} else {
+					vadj.SetBounds (0, height, RowHeight, h, h);
+				}
+			}
+
 			protected override void OnSizeAllocated (Gdk.Rectangle allocation)
 			{
 				base.OnSizeAllocated (allocation);
+
+				hadj.SetBounds (0, allocation.Width, 0, 0, allocation.Width);
+
+				SetBounds (allocation);
+
 				UpdatePage ();
 			}
 			
@@ -577,7 +516,19 @@ namespace MonoDevelop.Components
 				CalcRowHeight ();
 				CalcVisibleRows ();
 			}
-			
+
+			Adjustment hadj;
+			Adjustment vadj;
+
+			protected override void OnSetScrollAdjustments (Adjustment hadj, Adjustment vadj)
+			{
+				this.hadj = hadj;
+				this.vadj = vadj;
+				if (this.vadj != null)
+					this.vadj.ValueChanged += (sender, e) => QueueDraw ();
+				base.OnSetScrollAdjustments (hadj, vadj);
+			}
+
 			internal virtual void OnSelectItem (EventArgs e)
 			{
 				if (SelectItem != null)

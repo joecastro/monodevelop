@@ -25,10 +25,11 @@
 // THE SOFTWARE.
 
 using System;
+using Mono.TextEditor.Highlighting;
 
 namespace Mono.TextEditor.Vi
 {
-	public class ViMark : Mono.TextEditor.TextMarker
+	public class ViMark : Mono.TextEditor.TextLineMarker
 	{
 	
 		public char MarkCharacter {get; set;}

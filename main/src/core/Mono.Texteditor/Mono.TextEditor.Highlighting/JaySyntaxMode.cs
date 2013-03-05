@@ -36,9 +36,9 @@ namespace Mono.TextEditor.Highlighting
 	{
 		public JaySyntaxMode (TextDocument doc) : base (doc)
 		{
-			ResourceXmlProvider provider = new ResourceXmlProvider (typeof(IXmlProvider).Assembly, typeof(IXmlProvider).Assembly.GetManifestResourceNames ().First (s => s.Contains ("JaySyntaxMode")));
-			using (XmlReader reader = provider.Open ()) {
-				SyntaxMode baseMode = SyntaxMode.Read (reader);
+			ResourceStreamProvider provider = new ResourceStreamProvider (typeof(IStreamProvider).Assembly, typeof(IStreamProvider).Assembly.GetManifestResourceNames ().First (s => s.Contains ("JaySyntaxMode")));
+			using (var stream = provider.Open ()) {
+				SyntaxMode baseMode = SyntaxMode.Read (stream);
 				this.rules = new List<Rule> (baseMode.Rules);
 				this.keywords = new List<Keywords> (baseMode.Keywords);
 				this.spans = new List<Span> (baseMode.Spans).ToArray ();
@@ -69,7 +69,7 @@ namespace Mono.TextEditor.Highlighting
 				this.Rule = "mode:text/x-csharp";
 				this.Begin = new Regex ("}");
 				this.End = new Regex ("}");
-				this.TagColor = "keyword.access";
+				this.TagColor = "Keyword(Access)";
 			}
 			
 			public override string ToString ()
@@ -85,7 +85,7 @@ namespace Mono.TextEditor.Highlighting
 				this.Rule = "mode:text/x-csharp";
 				this.Begin = new Regex ("%{");
 				this.End = new Regex ("%}");
-				this.TagColor = "keyword.access";
+				this.TagColor = "Keyword(Access)";
 			}
 		}
 		
@@ -95,7 +95,7 @@ namespace Mono.TextEditor.Highlighting
 			{
 				this.Rule = "token";
 				this.Begin = this.End = new Regex ("%%");
-				this.TagColor = "keyword.access";
+				this.TagColor = "Keyword(Access)";
 			}
 		}
 		
@@ -105,7 +105,7 @@ namespace Mono.TextEditor.Highlighting
 			{
 			}
 			
-			protected override void ScanSpan (ref int i)
+			protected override bool ScanSpan (ref int i)
 			{
 				bool hasJayDefinitonSpan = spanStack.Any (s => s is JayDefinitionSpan);
 				int textOffset = i - StartOffset;
@@ -115,12 +115,12 @@ namespace Mono.TextEditor.Highlighting
 					if (next == '{') {
 						FoundSpanBegin (new ForcedJayBlockSpan (), i, 2);
 						i++;
-						return;
+						return true;
 					}
 					
 					if (!hasJayDefinitonSpan && next == '%') {
 						FoundSpanBegin (new JayDefinitionSpan (), i, 2);
-						return;
+						return true;
 					}
 					
 					if (next == '}' && spanStack.Any (s => s is ForcedJayBlockSpan)) {
@@ -129,17 +129,17 @@ namespace Mono.TextEditor.Highlighting
 							if (span is ForcedJayBlockSpan)
 								break;
 						}
-						return;
+						return false;
 					}
 				}
 				
 				
 				if (CurSpan is JayDefinitionSpan && CurText[textOffset] == '{' && hasJayDefinitonSpan && !spanStack.Any (s => s is JayBlockSpan)) {
 					FoundSpanBegin (new JayBlockSpan (i), i, 1);
-					return;
+					return true;
 				}
 				
-				base.ScanSpan (ref i);
+				return base.ScanSpan (ref i);
 			}
 			
 			protected override bool ScanSpanEnd (Mono.TextEditor.Highlighting.Span cur, ref int i)

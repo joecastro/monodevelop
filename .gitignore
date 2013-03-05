@@ -20,6 +20,10 @@ obj/
 /main/build/tests
 /main/monodevelop_version
 
+#VS writes these sometimes even when it doesn't change anything
+/main/_UpgradeReport_Files
+/main/UpgradeLog.*
+
 # globs
 Makefile.in
 *.DS_Store
@@ -68,7 +72,6 @@ test-results/
 main/external/Makefile
 /main/contrib/Makefile
 /main/contrib/Mono.Cecil/Makefile
-/main/contrib/NRefactory/Makefile
 /main/contrib/ICSharpCode.NRefactory.CSharp/Makefile
 /main/contrib/GitSharp/Makefile
 /main/contrib/Mono.Debugger.Soft/Makefile
@@ -155,6 +158,10 @@ main/external/Makefile
 /main/contrib/Sharpen/Makefile
 /main/contrib/ICSharpCode.Decompiler/Makefile
 /main/contrib/ICSharpCode.NRefactory/Makefile
+/main/src/addins/TextTemplating/Mono.TextTemplating.Tests/Makefile
+/main/tests/MacPlatform.Tests/Makefile
+/main/tests/MonoDevelop.MacDev.Tests/Makefile
+/main/tests/UserInterfaceTests/Makefile
 
 # extras configure junk
 /extras/MonoDevelop.Database/INSTALL

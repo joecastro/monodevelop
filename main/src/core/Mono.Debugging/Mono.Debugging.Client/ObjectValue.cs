@@ -402,7 +402,7 @@ namespace Mono.Debugging.Client
 				else if (IsArray)
 					return arrayCount > 0;
 				else if (IsObject)
-					return source.HasChildren (path, parentFrame.DebuggerSession.EvaluationOptions);
+					return true;
 				else
 					return false;
 			}
@@ -507,7 +507,7 @@ namespace Mono.Debugging.Client
 							children.AddRange (cs);
 						} catch (Exception ex) {
 							if (parentFrame != null)
-								parentFrame.DebuggerSession.OnDebuggerOutput( true, ex.ToString());
+								parentFrame.DebuggerSession.OnDebuggerOutput (true, ex.ToString ());
 							children.Add (CreateFatalError ("", ex.Message, ObjectValueFlags.ReadOnly));
 						}
 					}

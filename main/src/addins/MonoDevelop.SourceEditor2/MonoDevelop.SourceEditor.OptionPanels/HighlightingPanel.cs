@@ -120,14 +120,11 @@ namespace MonoDevelop.SourceEditor.OptionPanels
 		Mono.TextEditor.Highlighting.ColorScheme LoadStyle (string styleName, bool showException = true)
 		{
 			try {
-				return Mono.TextEditor.Highlighting.SyntaxModeService.GetColorStyle (Style, styleName);
+				return Mono.TextEditor.Highlighting.SyntaxModeService.GetColorStyle (styleName);
 			} catch (Exception e) {
 				if (showException)
-					MessageService.ShowError ("Error while importing color style.", e.InnerException.Message);
-				var result = new Mono.TextEditor.Highlighting.DefaultStyle (Style);
-				result.Name = styleName;
-				result.Description = "Error";
-				return result;
+					MessageService.ShowError ("Error while importing color style " + styleName, (e.InnerException ?? e).Message);
+				return Mono.TextEditor.Highlighting.SyntaxModeService.DefaultColorStyle;
 			}
 		
 		}
@@ -195,45 +192,22 @@ namespace MonoDevelop.SourceEditor.OptionPanels
 			var dialog = new SelectFileDialog (GettextCatalog.GetString ("Highlighting Scheme"), Gtk.FileChooserAction.Open) {
 				TransientFor = this.Toplevel as Gtk.Window,
 			};
-			dialog.AddFilter (null, "*.xml");
+			dialog.AddFilter (null, "*.*");
 			if (!dialog.Run ())
 				return;
-			
-			System.Collections.Generic.List<System.Xml.Schema.ValidationEventArgs> validationResult;
+
+			string newFileName = SourceEditorDisplayBinding.SyntaxModePath.Combine (dialog.SelectedFile.FileName);
+
+			bool success = true;
 			try {
-				validationResult = Mono.TextEditor.Highlighting.SyntaxModeService.ValidateStyleFile (dialog.SelectedFile);
-			} catch (Exception) {
-				MessageService.ShowError (GettextCatalog.GetString ("Validation of style file failed."));
-				return;
+				File.Copy (dialog.SelectedFile.FullPath, newFileName);
+			} catch (Exception e) {
+				success = false;
+				LoggingService.LogError ("Can't copy syntax mode file.", e);
 			}
-			
-			if (validationResult.Count == 0) {
-				string newFileName = SourceEditorDisplayBinding.SyntaxModePath.Combine (dialog.SelectedFile.FileName);
-				if (!newFileName.EndsWith ("Style.xml"))
-					newFileName = SourceEditorDisplayBinding.SyntaxModePath.Combine (dialog.SelectedFile.FileNameWithoutExtension + "Style.xml");
-				bool success = true;
-				try {
-					File.Copy (dialog.SelectedFile, newFileName);
-				} catch (Exception e) {
-					success = false;
-					LoggingService.LogError ("Can't copy syntax mode file.", e);
-				}
-				if (success) {
-					SourceEditorDisplayBinding.LoadCustomStylesAndModes ();
-					ShowStyles ();
-				}
-			} else {
-				StringBuilder errorMessage = new StringBuilder ();
-				errorMessage.AppendLine (GettextCatalog.GetString ("Validation of style file failed."));
-				int count = 0;
-				foreach (System.Xml.Schema.ValidationEventArgs vArg in validationResult) {
-					errorMessage.AppendLine (vArg.Message);
-					if (count++ > 5) {
-						errorMessage.AppendLine ("...");
-						break;
-					}
-				}
-				MessageService.ShowError (errorMessage.ToString ());
+			if (success) {
+				SourceEditorDisplayBinding.LoadCustomStylesAndModes ();
+				ShowStyles ();
 			}
 		}
 		
@@ -241,17 +215,22 @@ namespace MonoDevelop.SourceEditor.OptionPanels
 		{
 			this.enableSemanticHighlightingCheckbutton.Sensitive = this.enableHighlightingCheckbutton.Active;
 		}
+
+		internal static void UpdateActiveDocument ()
+		{
+			if (IdeApp.Workbench.ActiveDocument != null) {
+				IdeApp.Workbench.ActiveDocument.UpdateParseDocument ();
+				IdeApp.Workbench.ActiveDocument.Editor.Parent.TextViewMargin.PurgeLayoutCache ();
+				IdeApp.Workbench.ActiveDocument.Editor.Parent.QueueDraw ();
+			}
+		}
 		
 		public virtual void ApplyChanges ()
 		{
 			DefaultSourceEditorOptions.Instance.EnableSyntaxHighlighting = this.enableHighlightingCheckbutton.Active;
 			if (DefaultSourceEditorOptions.Instance.EnableSemanticHighlighting != this.enableSemanticHighlightingCheckbutton.Active) {
 				DefaultSourceEditorOptions.Instance.EnableSemanticHighlighting = this.enableSemanticHighlightingCheckbutton.Active;
-				if (IdeApp.Workbench.ActiveDocument != null) {
-					IdeApp.Workbench.ActiveDocument.UpdateParseDocument ();
-					IdeApp.Workbench.ActiveDocument.Editor.Parent.TextViewMargin.PurgeLayoutCache ();
-					IdeApp.Workbench.ActiveDocument.Editor.Parent.QueueDraw ();
-				}
+				UpdateActiveDocument ();
 			}
 			TreeIter selectedIter;
 			if (styleTreeview.Selection.GetSelected (out selectedIter)) {

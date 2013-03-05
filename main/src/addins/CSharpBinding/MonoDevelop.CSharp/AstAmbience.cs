@@ -28,6 +28,7 @@ using ICSharpCode.NRefactory.CSharp;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using MonoDevelop.Core;
 
 namespace MonoDevelop.CSharp
 {
@@ -104,6 +105,8 @@ namespace MonoDevelop.CSharp
 		
 		static void AppendEscaped (StringBuilder result, string text)
 		{
+			if (text == null)
+				return;
 			foreach (char ch in text) {
 				switch (ch) {
 				case '<':
@@ -135,6 +138,11 @@ namespace MonoDevelop.CSharp
 				var type = e as TypeDeclaration;
 				sb.Append (type.Name);
 				AppendTypeParameter (sb, type.TypeParameters);
+			} else if (e is DelegateDeclaration) {
+				var del = e as DelegateDeclaration;
+				sb.Append (del.Name);
+				AppendTypeParameter (sb, del.TypeParameters);
+				AppendParameter (sb, del.Parameters);
 			} else if (e is Accessor) {
 				if (e.Role == PropertyDeclaration.GetterRole) {
 					sb.Append ("get");
@@ -148,13 +156,25 @@ namespace MonoDevelop.CSharp
 			} else if (e is OperatorDeclaration) {
 				var op = e as OperatorDeclaration;
 				sb.Append ("operator");
-				AppendEscaped (sb, op.OperatorTypeToken.GetText ());
+				if (!op.OperatorTypeToken.IsNull)
+					AppendEscaped (sb, op.OperatorTypeToken.GetText ());
 				AppendParameter (sb, op.Parameters);
 			} else if (e is MethodDeclaration) {
 				var method = e as MethodDeclaration;
+				if (!method.PrivateImplementationType.IsNull)
+					AppendEscaped (sb, method.PrivateImplementationType.GetText () + ".");
 				sb.Append (method.Name);
 				AppendTypeParameter (sb, method.TypeParameters);
 				AppendParameter (sb, method.Parameters);
+				if (method.Body.IsNull) {
+					string tag = null;
+					if (method.HasModifier (Modifiers.Abstract))
+						tag = GettextCatalog.GetString ("(abstract)");
+					if (method.HasModifier (Modifiers.Partial))
+						tag = GettextCatalog.GetString ("(partial)");
+					if (tag != null)
+						sb.Append (" <small>" + tag + "</small>");
+				}
 			} else if (e is ConstructorDeclaration) {
 				var constructor = e as ConstructorDeclaration;
 				sb.Append (constructor.Name);
@@ -206,11 +226,21 @@ namespace MonoDevelop.CSharp
 				if (!evt.Variables.Any ())
 					return "";
 				sb.Append (evt.Variables.First ().Name);
+			} else if (e is PropertyDeclaration) {
+				var property = (PropertyDeclaration)e;
+				if (!property.PrivateImplementationType.IsNull)
+					AppendEscaped (sb, property.PrivateImplementationType.GetText () + ".");
+				sb.Append (property.Name);
+			} else if (e is CustomEventDeclaration) {
+				var customEvent = (CustomEventDeclaration)e;
+				if (!customEvent.PrivateImplementationType.IsNull)
+					AppendEscaped (sb, customEvent.PrivateImplementationType.GetText () + ".");
+				sb.Append (customEvent.Name);
 			} else if (e is EntityDeclaration) {
 				var entity = (EntityDeclaration)e;
 				sb.Append (entity.Name);
 			}
-			
+
 			string markup = sb.ToString ();
 			if (IsObsolete (e as EntityDeclaration))
 				return "<s>" + markup + "</s>";

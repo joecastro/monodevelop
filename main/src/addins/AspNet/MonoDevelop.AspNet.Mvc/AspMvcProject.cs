@@ -64,7 +64,7 @@ namespace MonoDevelop.AspNet.Mvc
 		
 		public override bool SupportsFramework (MonoDevelop.Core.Assemblies.TargetFramework framework)
 		{
-			return framework.IsCompatibleWithFramework (MonoDevelop.Core.Assemblies.TargetFrameworkMoniker.NET_3_5);
+			return framework.CanReferenceAssembliesTargetingFramework (MonoDevelop.Core.Assemblies.TargetFrameworkMoniker.NET_3_5);
 		}
 		
 		public override IEnumerable<string> GetSpecialDirectories ()
@@ -181,7 +181,29 @@ namespace MonoDevelop.AspNet.Mvc
 
 		public override bool SupportsFramework (MonoDevelop.Core.Assemblies.TargetFramework framework)
 		{
-			return framework.IsCompatibleWithFramework (MonoDevelop.Core.Assemblies.TargetFrameworkMoniker.NET_4_0);
+			return framework.CanReferenceAssembliesTargetingFramework (MonoDevelop.Core.Assemblies.TargetFrameworkMoniker.NET_4_0);
+		}
+	}
+
+	public class AspMvc4Project : AspMvcProject
+	{
+		public AspMvc4Project ()
+		{
+		}
+		
+		public AspMvc4Project (string languageName)
+			: base (languageName)
+		{
+		}
+		
+		public AspMvc4Project (string languageName, ProjectCreateInformation info, XmlElement projectOptions)
+			: base (languageName, info, projectOptions)
+		{
+		}
+		
+		public override bool SupportsFramework (MonoDevelop.Core.Assemblies.TargetFramework framework)
+		{
+			return framework.CanReferenceAssembliesTargetingFramework (MonoDevelop.Core.Assemblies.TargetFrameworkMoniker.NET_4_0);
 		}
 	}
 }

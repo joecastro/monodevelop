@@ -39,7 +39,7 @@ namespace MonoDevelop.Core.Assemblies
 			if (ref_assemblies_folder != null)
 				return ref_assemblies_folder;
 			var fxDir = framework.Id.GetAssemblyDirectoryName ();
-			foreach (var rootDir in runtime.GetReferenceFrameworkDirectories ()) {
+			foreach (var rootDir in ((MonoTargetRuntime)runtime).GetReferenceFrameworkDirectories (true)) {
 				var dir = rootDir.Combine (fxDir);
 				var frameworkList = dir.Combine ("RedistList", "FrameworkList.xml");
 				if (!File.Exists (frameworkList))
@@ -139,7 +139,7 @@ namespace MonoDevelop.Core.Assemblies
 		public override string GetToolPath (string toolName)
 		{
 			if (toolName == "csc" || toolName == "mcs") {
-				if (((MonoTargetRuntime)runtime).HasMultitargetingMcs) {
+				if (targetRuntime.HasMultitargetingMcs) {
 					toolName = "mcs";
 				} else {
 					toolName = GetOldMcsName (framework.Id);

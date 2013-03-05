@@ -147,10 +147,8 @@ namespace MonoDevelop.Ide.CodeTemplates
 				var baseTypeDef = baseType.GetDefinition();
 				if (baseTypeDef != null && baseTypeDef.Name == "IEnumerable") {
 					if (baseTypeDef.Namespace == "System.Collections.Generic" && baseTypeDef.TypeParameterCount == 1) {
-						var pt = baseType as ParameterizedType;
-						if (pt != null) {
-							return pt.TypeArguments[0];
-						}
+						if (baseType.TypeArguments.Count > 0)
+							return baseType.TypeArguments[0];
 					} else if (baseTypeDef.Namespace == "System.Collections" && baseTypeDef.TypeParameterCount == 0) {
 						return CurrentContext.Compilation.FindType (KnownTypeCode.Object);
 					}
@@ -254,14 +252,33 @@ namespace MonoDevelop.Ide.CodeTemplates
 				member = name.Substring (idx);
 				name = name.Substring (0, idx);
 			}
-			
-			var type = CurrentContext.Compilation.LookupType (ns, name);
+
+			var type = new GetClassTypeReference (ns, name, 0).Resolve (
+				CurrentContext.Document.ParsedDocument.GetTypeResolveContext (
+				CurrentContext.Document.Compilation, 
+				CurrentContext.Document.Editor.Caret.Location
+				)
+			);
+			bool stripAttribute = false;
+			if (type == null || type.Kind == TypeKind.Unknown) {
+				type = new GetClassTypeReference (ns, name + "Attribute", 0).Resolve (
+					CurrentContext.Document.ParsedDocument.GetTypeResolveContext (
+					CurrentContext.Document.Compilation, 
+					CurrentContext.Document.Editor.Caret.Location
+					)
+				);	
+				stripAttribute = true;
+			}
 			if (type == null || type.Kind == TypeKind.Unknown)
-				return fullTypeName;
+				return fullTypeName.Replace ("#", ".");
 			var generator = CodeGenerator.CreateGenerator (CurrentContext.Document);
-			if (generator != null)
-				return generator.GetShortTypeString (CurrentContext.Document, type) + member;
-			return fullTypeName;
+			if (generator != null) {
+				var result = generator.GetShortTypeString (CurrentContext.Document, type) + member;
+				if (stripAttribute && result.EndsWith ("Attribute", StringComparison.Ordinal))
+				    result = result.Substring (0, result.Length - "Attribute".Length);
+				return result;
+			}
+			return fullTypeName.Replace ("#", ".");
 		}
 		
 		static Regex functionRegEx = new Regex ("([^(]*)\\(([^(]*)\\)", RegexOptions.Compiled);

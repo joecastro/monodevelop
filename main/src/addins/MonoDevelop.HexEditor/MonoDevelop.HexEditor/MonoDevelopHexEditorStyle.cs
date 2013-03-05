@@ -29,6 +29,8 @@ using Mono.TextEditor.Highlighting;
 using Mono.MHex.Rendering;
 using Gdk;
 using MonoDevelop.Core;
+using MonoDevelop.Ide;
+using Mono.TextEditor;
 
 namespace MonoDevelop.HexEditor
 {
@@ -41,102 +43,100 @@ namespace MonoDevelop.HexEditor
 		{
 			this.hexEditor = hexEditor;
 			SetStyle ();
-			PropertyService.PropertyChanged += delegate(object sender, PropertyChangedEventArgs e) {
-				if (e.Key == "ColorScheme") {
-					SetStyle ();
-					this.hexEditor.Options.RaiseChanged ();
-					this.hexEditor.PurgeLayoutCaches ();
-					this.hexEditor.Repaint ();
-				}
+			IdeApp.Preferences.ColorSchemeChanged += delegate {
+				SetStyle ();
+				this.hexEditor.Options.RaiseChanged ();
+				this.hexEditor.PurgeLayoutCaches ();
+				this.hexEditor.Repaint ();
 			};
 		}
 		
 		void SetStyle ()
 		{
-			colorStyle = SyntaxModeService.GetColorStyle (hexEditor.Style, PropertyService.Get ("ColorScheme", "Default"));
+			colorStyle = SyntaxModeService.GetColorStyle (IdeApp.Preferences.ColorScheme);
 		}
 		
 		public override Color HexOffset {
 			get {
-				return colorStyle.LineNumber.Color;
+				return (HslColor)colorStyle.LineNumbers.Foreground;
 			}
 		}
 		
 		public override Color HexOffsetBg {
 			get {
-				return colorStyle.LineNumber.BackgroundColor;
+				return (HslColor)colorStyle.LineNumbers.Background;
 			}
 		}
 		
 		public override Color HexOffsetHighlighted {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.LineNumberFgHighlighted);
+				return (HslColor)colorStyle.LineMarker.GetColor ("color");
 			}
 		}
 		
 		public override Color HexDigit {
 			get {
-				return colorStyle.Default.Color;
+				return (HslColor)colorStyle.PlainText.Foreground;
 			}
 		}
 		
 		public override Color HexDigitBg {
 			get {
-				return colorStyle.Default.BackgroundColor;
+				return (HslColor)colorStyle.PlainText.Background;
 			}
 		}
 		
 		public override Color DashedLineFg {
 			get {
-				return colorStyle.Default.Color;
+				return (HslColor)colorStyle.PlainText.Foreground;
 			}
 		}
 		
 		public override Color DashedLineBg {
 			get {
-				return colorStyle.Default.BackgroundColor;
+				return (HslColor)colorStyle.PlainText.Background;
 			}
 		}
 		
 		public override Color IconBarBg {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.IconBarBg);
+				return (HslColor) (colorStyle.IndicatorMarginSeparator.GetColor("color"));
 			}
 		}
 		
 		public override Color IconBarSeperator {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.IconBarSeperator);
+				return (HslColor) (colorStyle.IndicatorMarginSeparator.GetColor("color"));
 			}
 		}
 		
 		public override Color BookmarkColor1 {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.BookmarkColor1);
+				return (HslColor) (colorStyle.Bookmarks.GetColor ("color"));
 			}
 		}
 		
 		public override Color BookmarkColor2 {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.BookmarkColor2);
+				return (HslColor) (colorStyle.Bookmarks.GetColor ("secondcolor"));
 			}
 		}
 		
 		public override Color Selection {
 			get {
-				return colorStyle.Selection.Color;
+				return (HslColor)colorStyle.SelectedText.Foreground;
 			}
 		}
 		
 		public override Color SelectionBg {
 			get {
-				return colorStyle.Selection.BackgroundColor;
+				return (HslColor)colorStyle.SelectedText.Background;
 			}
 		}
 		
 		public override Color HighlightOffset {
 			get {
-				return Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (colorStyle.SearchTextBg);
+				return (HslColor) (colorStyle.SearchResult.GetColor ("color"));
 			}
 		}
 	}

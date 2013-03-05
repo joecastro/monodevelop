@@ -49,6 +49,7 @@ namespace MonoDevelop.Debugger
 		StepInto,
 		StepOut,
 		Pause,
+		Continue,
 		ClearAllBreakpoints,
 		AttachToProcess,
 		Detach,
@@ -190,6 +191,11 @@ namespace MonoDevelop.Debugger
 			                                 AlertButton.Cancel,
 			                                 bBuild,
 			                                 bRun);
+
+			// This call is a workaround for bug #6907. Without it, the main monodevelop window is left it a weird
+			// drawing state after the message dialog is shown. This may be a gtk/mac issue. Still under research.
+			DispatchService.RunPendingEvents ();
+
 			if (res == AlertButton.Cancel)
 				return CheckResult.Cancel;
 			else if (res == bRun)
@@ -242,8 +248,12 @@ namespace MonoDevelop.Debugger
 			var dialog = new SelectFileDialog (GettextCatalog.GetString ("Application to Debug")) {
 				TransientFor = IdeApp.Workbench.RootWindow,
 			};
-			if (dialog.Run () && IdeApp.ProjectOperations.CanExecuteFile (dialog.SelectedFile))
-				IdeApp.ProjectOperations.DebugApplication (dialog.SelectedFile);
+			if (dialog.Run ()) {
+				if (IdeApp.ProjectOperations.CanDebugFile (dialog.SelectedFile))
+					IdeApp.ProjectOperations.DebugApplication (dialog.SelectedFile);
+				else
+					MessageService.ShowError (GettextCatalog.GetString ("The file '{0}' can't be debugged", dialog.SelectedFile));
+			}
 		}
 		
 		protected override void Update (CommandInfo info)
@@ -341,8 +351,22 @@ namespace MonoDevelop.Debugger
 		
 		protected override void Update (CommandInfo info)
 		{
-			info.Enabled = DebuggingService.IsRunning;
-			info.Visible = DebuggingService.IsFeatureSupported (DebuggerFeatures.Pause);
+			info.Visible = DebuggingService.IsRunning;
+			info.Enabled = DebuggingService.IsFeatureSupported (DebuggerFeatures.Pause) && DebuggingService.IsConnected;
+		}
+	}
+	
+	internal class ContinueDebugHandler : CommandHandler
+	{
+		protected override void Run ()
+		{
+			DebuggingService.Resume ();
+		}
+		
+		protected override void Update (CommandInfo info)
+		{
+			info.Visible = !DebuggingService.IsRunning;
+			info.Enabled = DebuggingService.IsConnected && DebuggingService.IsPaused;
 		}
 	}
 	
@@ -365,8 +389,9 @@ namespace MonoDevelop.Debugger
 		protected override void Run ()
 		{
 			var bp = DebuggingService.Breakpoints.Toggle (
-			    IdeApp.Workbench.ActiveDocument.FileName,
-			    IdeApp.Workbench.ActiveDocument.Editor.Caret.Line);
+				IdeApp.Workbench.ActiveDocument.FileName,
+				IdeApp.Workbench.ActiveDocument.Editor.Caret.Line,
+				IdeApp.Workbench.ActiveDocument.Editor.Caret.Column);
 			
 			// If the breakpoint could not be inserted in the caret location, move the caret
 			// to the real line of the breakpoint, so that if the Toggle command is run again,
@@ -494,7 +519,7 @@ namespace MonoDevelop.Debugger
 	{
 		protected override void Run ()
 		{
-			Breakpoint bp = new Breakpoint (IdeApp.Workbench.ActiveDocument.FileName, IdeApp.Workbench.ActiveDocument.Editor.Caret.Line);
+			Breakpoint bp = new Breakpoint (IdeApp.Workbench.ActiveDocument.FileName, IdeApp.Workbench.ActiveDocument.Editor.Caret.Line, IdeApp.Workbench.ActiveDocument.Editor.Caret.Column);
 			if (DebuggingService.ShowBreakpointProperties (bp, true))
 				DebuggingService.Breakpoints.Add (bp);
 		}

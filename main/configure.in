@@ -1,4 +1,4 @@
-AC_INIT([monodevelop], 3.1.0, [monodevelop-list@lists.ximian.com])
+AC_INIT([monodevelop], 4.0, [monodevelop-list@lists.ximian.com])
 AC_PREREQ(2.53)
 AM_INIT_AUTOMAKE([1.10 tar-ustar])
 AM_MAINTAINER_MODE
@@ -6,13 +6,13 @@ AM_MAINTAINER_MODE
 #capture aclocal flags for autoreconf
 AC_SUBST(ACLOCAL_FLAGS)
 
-ASSEMBLY_VERSION=3.1.0.0
+ASSEMBLY_VERSION=4.0.0.0
 
 # This is parsed in BuildVariables.cs. Keep the format consistent to avoid breaking
 # the C# side of things. It should be one of the following two formats:
 # 1) "VERSION_NUMBER"					"2.0"
 # 2) "VERSION_NUMBER BUILD_TYPE BUILD_NUMBER"		"2.0 Alpha 1"
-PACKAGE_VERSION_LABEL="3.1.0"
+PACKAGE_VERSION_LABEL="4.0"
 
 AC_PATH_PROG(MONO, mono)
 AC_PATH_PROG(MCS, gmcs)
@@ -115,12 +115,6 @@ MONOADDINS_REQUIRED_VERSION=0.6
 GTKSHARP_REQUIRED_VERSION=2.12.8
 MONODOC_REQUIRED_VERSION=1.0
 
-PKG_CHECK_MODULES(MONO_ADDINS, mono-addins >= $MONOADDINS_REQUIRED_VERSION)
-AC_SUBST(MONO_ADDINS_LIBS)
-PKG_CHECK_MODULES(MONO_ADDINS_SETUP, mono-addins-setup >= $MONOADDINS_REQUIRED_VERSION)
-AC_SUBST(MONO_ADDINS_SETUP_LIBS)
-PKG_CHECK_MODULES(MONO_ADDINS_GUI, mono-addins-gui >= $MONOADDINS_REQUIRED_VERSION)
-AC_SUBST(MONO_ADDINS_GUI_LIBS)
 PKG_CHECK_MODULES(GLIB_SHARP, glib-sharp-2.0 >= $GTKSHARP_REQUIRED_VERSION)
 AC_SUBST(GLIB_SHARP_LIBS)
 PKG_CHECK_MODULES(GTK_SHARP, gtk-sharp-2.0 >= $GTKSHARP_REQUIRED_VERSION)
@@ -269,7 +263,6 @@ build/Makefile
 build/MacOSX/Makefile
 contrib/Makefile
 contrib/Mono.Debugger.Soft/Makefile
-contrib/NRefactory/Makefile
 contrib/ICSharpCode.Decompiler/Makefile
 external/Makefile
 src/Makefile
@@ -337,11 +330,9 @@ src/addins/MonoDevelop.Debugger.Soft/MonoDevelop.Debugger.Soft/Makefile
 src/addins/MonoDevelop.Debugger.Soft/MonoDevelop.Debugger.Soft.AspNet/Makefile
 src/addins/MonoDevelop.HexEditor/Makefile
 src/addins/MonoDevelop.DocFood/Makefile
-src/addins/MonoDevelop.MacDev/Makefile
 tests/Makefile
 tests/UnitTests/Makefile
 tests/UserInterfaceTests/Makefile
-tests/MonoDevelop.MacDev.Tests/Makefile
 tests/MacPlatform.Tests/Makefile
 Makefile
 monodevelop

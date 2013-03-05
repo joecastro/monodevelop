@@ -261,7 +261,7 @@ launcher_variable (const char *app_name)
 }
 
 static void
-update_environment (const char *appDir, const char *app)
+update_environment (const char *macosDir, const char *app)
 {
 	char *value, *v1, *v2;
 	char *variable;
@@ -269,9 +269,12 @@ update_environment (const char *appDir, const char *app)
 	
 	push_env ("DYLD_FALLBACK_LIBRARY_PATH", "/Library/Frameworks/Mono.framework/Versions/Current/lib:/lib:/usr/lib");
 	
+	/* Mono "External" directory */
+	push_env ("PKG_CONFIG_PATH", "/Library/Frameworks/Mono.framework/External/pkgconfig");
+	
 	/* Enable the use of stuff bundled into the app bundle */
-	if ((v2 = str_append (appDir, "/share/pkgconfig"))) {
-		if ((v1 = str_append (appDir, "/lib/pkgconfig:"))) {
+	if ((v2 = str_append (macosDir, "/share/pkgconfig"))) {
+		if ((v1 = str_append (macosDir, "/lib/pkgconfig:"))) {
 			if ((value = str_append (v1, v2))) {
 				push_env ("PKG_CONFIG_PATH", value);
 				free (value);
@@ -283,16 +286,17 @@ update_environment (const char *appDir, const char *app)
 		free (v2);
 	}
 	
-	if ((value = str_append (appDir, "/lib"))) {
+	if ((value = str_append (macosDir, "/lib"))) {
 		push_env ("DYLD_FALLBACK_LIBRARY_PATH", value);
 		free (value);
 	}
 	
-	push_env ("MONO_GAC_PREFIX", appDir);
-	push_env ("PATH", appDir);
+	push_env ("MONO_GAC_PREFIX", macosDir);
 	
-	/* Mono "External" directory */
-	push_env ("PKG_CONFIG_PATH", "/Library/Frameworks/Mono.framework/External/pkgconfig");
+	if ((value = str_append (macosDir, "/bin"))) {
+		push_env ("PATH", macosDir);
+		free (value);
+	}
 	
 	/* Set our launcher pid so we don't recurse */
 	sprintf (buf, "%ld", (long) getpid ());
@@ -319,12 +323,55 @@ is_launcher (const char *app)
 	return !strcmp (launcher, buf);
 }
 
+static bool
+env2bool (const char *env, bool defaultValue)
+{
+	const char *value;
+	bool nz = NO;
+	int i;
+	
+	if (!(value = getenv (env)))
+		return defaultValue;
+	
+	if (!strcasecmp (value, "true"))
+		return YES;
+	
+	if (!strcasecmp (value, "yes"))
+		return YES;
+	
+	/* check to see if the value is numeric. All numeric values evaluate to true *except* zero */
+	for (i = 0; value[i]; i++) {
+		if (!isdigit ((int) ((unsigned char) value[i])))
+			return NO;
+		
+		if (value[i] != '0')
+			nz = YES;
+	}
+	
+	return nz;
+}
+
 int main (int argc, char **argv)
 {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 	NSString *binDir = [[NSString alloc] initWithUTF8String: "Contents/MacOS/lib/monodevelop/bin"];
 	NSString *appDir = [[NSBundle mainBundle] bundlePath];
-	const char *req_mono_version = "2.10.9";
+	// can be overridden with plist string MonoMinVersion
+	NSString *req_mono_version = @"2.10.11";
+	// can be overridden with either plist bool MonoUseSGen or MONODEVELOP_USE_SGEN env
+	bool use_sgen = YES;
+
+	NSDictionary *plist = [[NSBundle mainBundle] infoDictionary];
+	if (plist) {
+		NSNumber *sgen_obj = (NSNumber *) [plist objectForKey:@"MonoUseSGen"];
+		if (sgen_obj)
+			use_sgen = [sgen_obj boolValue];
+		
+		NSString *version_obj = [plist objectForKey:@"MonoMinVersion"];
+		if (version_obj && [version_obj length] > 0)
+			req_mono_version = version_obj;
+	}
+
 	NSString *exePath, *exeName;
 	const char *basename;
 	struct rlimit limit;
@@ -337,7 +384,7 @@ int main (int argc, char **argv)
 		basename++;
 	
 	if (is_launcher (basename)) {
-		update_environment ([appDir UTF8String], basename);
+		update_environment ([[appDir stringByAppendingPathComponent:@"Contents/MacOS"] UTF8String], basename);
 		[pool drain];
 		
 		return execv (argv[0], argv);
@@ -351,11 +398,13 @@ int main (int argc, char **argv)
 	exeName = [NSString stringWithFormat:@"%s.exe", basename];
 	exePath = [[appDir stringByAppendingPathComponent: binDir] stringByAppendingPathComponent: exeName];
 	
-	bool sgen = getenv ("MONODEVELOP_USE_SGEN") != NULL;
-	void *libmono = dlopen (sgen ? MONO_LIB_PATH ("libmonosgen-2.0.dylib") : MONO_LIB_PATH ("libmono-2.0.dylib"), RTLD_LAZY);
+	// allow the MONODEVELOP_USE_SGEN environment variable to override the plist value
+	use_sgen = env2bool ("MONODEVELOP_USE_SGEN", use_sgen);
+	
+	void *libmono = dlopen (use_sgen ? MONO_LIB_PATH ("libmonosgen-2.0.dylib") : MONO_LIB_PATH ("libmono-2.0.dylib"), RTLD_LAZY);
 	
 	if (libmono == NULL) {
-		fprintf (stderr, "Failed to load libmono%s-2.0.dylib: %s\n", sgen ? "sgen" : "", dlerror ());
+		fprintf (stderr, "Failed to load libmono%s-2.0.dylib: %s\n", use_sgen ? "sgen" : "", dlerror ());
 		exit_with_message ("This application requires the Mono framework.", argv[0]);
 	}
 	
@@ -378,7 +427,7 @@ int main (int argc, char **argv)
 	}
 	
 	char *mono_version = _mono_get_runtime_build_info ();
-	if (!check_mono_version (mono_version, req_mono_version))
+	if (!check_mono_version (mono_version, [req_mono_version UTF8String]))
 		exit_with_message ("This application requires a newer version of the Mono framework.", argv[0]);
 	
 	extra_argv = get_mono_env_options (&extra_argc);

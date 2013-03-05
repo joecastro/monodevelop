@@ -49,6 +49,8 @@ using MonoDevelop.Core.Instrumentation;
 using Mono.TextEditor;
 using System.Diagnostics;
 using ICSharpCode.NRefactory.Documentation;
+using ICSharpCode.NRefactory.TypeSystem.Implementation;
+using System.Text;
 
 namespace MonoDevelop.Ide
 {
@@ -155,9 +157,12 @@ namespace MonoDevelop.Ide
 		
 		public IAsyncOperation CurrentRunOperation {
 			get { return currentRunOperation; }
-			set { currentRunOperation = value ?? NullAsyncOperation.Success; }
+			set {
+				currentRunOperation = value ?? NullAsyncOperation.Success;
+				OnCurrentRunOperationChanged (EventArgs.Empty);
+			}
 		}
-		
+
 		public bool IsBuilding (IBuildTarget target)
 		{
 			return !currentBuildOperation.IsCompleted && ContainsTarget (target, currentBuildOperationOwner);
@@ -212,21 +217,24 @@ namespace MonoDevelop.Ide
 			return (GetDeclaredFile(item) != null);
 		}*/
 		
-		public bool CanJumpToDeclaration (ICSharpCode.NRefactory.TypeSystem.INamedElement element)
+		public bool CanJumpToDeclaration (object element)
 		{
+			if (element is ICSharpCode.NRefactory.TypeSystem.IVariable)
+				return true;
 			var entity = element as ICSharpCode.NRefactory.TypeSystem.IEntity;
 			if (entity == null && element is ICSharpCode.NRefactory.TypeSystem.IType)
 				entity = ((ICSharpCode.NRefactory.TypeSystem.IType)element).GetDefinition ();
 			if (entity == null)
 				return false;
-			
 			if (entity.Region.IsEmpty) {
-				return !string.IsNullOrEmpty (entity.ParentAssembly.UnresolvedAssembly.Location);
+				var parentAssembly = entity.ParentAssembly;
+				if (parentAssembly == null)
+					return false;
+				return !string.IsNullOrEmpty (parentAssembly.UnresolvedAssembly.Location);
 			}
 			return true;
 		}
-		
-		
+
 		static MonoDevelop.Ide.FindInFiles.SearchResult GetJumpTypePartSearchResult (ICSharpCode.NRefactory.TypeSystem.IUnresolvedTypeDefinition part)
 		{
 			var provider = new MonoDevelop.Ide.FindInFiles.FileProvider (part.Region.FileName);
@@ -263,6 +271,9 @@ namespace MonoDevelop.Ide
 
 			if (entity == null && element is ICSharpCode.NRefactory.TypeSystem.IType)
 				entity = ((ICSharpCode.NRefactory.TypeSystem.IType)element).GetDefinition ();
+			if (entity is SpecializedMember) 
+				entity = ((SpecializedMember)entity).MemberDefinition;
+
 			if (entity == null) {
 				LoggingService.LogError ("Unknown element:" + element);
 				return;
@@ -280,7 +291,7 @@ namespace MonoDevelop.Ide
 
 			if (isCecilProjectContent && doc != null) {
 				doc.RunWhenLoaded (delegate {
-					MonoDevelop.Ide.Gui.Content.IUrlHandler handler = doc.ActiveView as MonoDevelop.Ide.Gui.Content.IUrlHandler;
+					var handler = doc.PrimaryView.GetContent<MonoDevelop.Ide.Gui.Content.IUrlHandler> ();
 					if (handler != null)
 						handler.Open (entity.GetIdString ());
 				});
@@ -463,13 +474,20 @@ namespace MonoDevelop.Ide
 		
 		bool AllowSave (IWorkspaceFileObject item)
 		{
-			if (HasChanged (item))
+			if (HasChanged (item)) {
 				return MessageService.Confirm (
-				    GettextCatalog.GetString ("Some project files have been changed from outside MonoDevelop. Do you want to overwrite them?"),
-				    GettextCatalog.GetString ("Changes done in those files will be overwritten by MonoDevelop."),
-				    AlertButton.OverwriteFile);
-			else
+					GettextCatalog.GetString (
+						"Some project files have been changed from outside {0}. Do you want to overwrite them?",
+						BrandingService.ApplicationName
+					),
+					GettextCatalog.GetString (
+						"Changes done in those files will be overwritten by {0}.",
+						BrandingService.ApplicationName
+					),
+					AlertButton.OverwriteFile);
+			} else {
 				return true;
+			}
 		}
 		
 		bool HasChanged (IWorkspaceFileObject item)
@@ -733,19 +751,25 @@ namespace MonoDevelop.Ide
 				if (MessageService.RunCustomDialog (selDialog) == (int)Gtk.ResponseType.Ok) {
 					var newRefs = selDialog.ReferenceInformations;
 					
-					ArrayList toDelete = new ArrayList ();
+					var editEventArgs = new EditReferencesEventArgs (project);
 					foreach (ProjectReference refInfo in project.References)
 						if (!newRefs.Contains (refInfo))
-							toDelete.Add (refInfo);
-					
-					foreach (ProjectReference refInfo in toDelete)
-							project.References.Remove (refInfo);
+							editEventArgs.ReferencesToRemove.Add (refInfo);
 
 					foreach (ProjectReference refInfo in selDialog.ReferenceInformations)
 						if (!project.References.Contains (refInfo))
-							project.References.Add(refInfo);
-					
-					return true;
+							editEventArgs.ReferencesToAdd.Add(refInfo);
+
+					if (BeforeEditReferences != null)
+						BeforeEditReferences (this, editEventArgs);
+
+					foreach (var reference in editEventArgs.ReferencesToRemove)
+						project.References.Remove (reference);
+
+					foreach (var reference in editEventArgs.ReferencesToAdd)
+						project.References.Add (reference);
+
+					return editEventArgs.ReferencesToAdd.Count > 0 || editEventArgs.ReferencesToRemove.Count > 0;
 				}
 				else
 					return false;
@@ -838,13 +862,13 @@ namespace MonoDevelop.Ide
 
 		public bool CanExecute (IBuildTarget entry)
 		{
-			ExecutionContext context = new ExecutionContext (Runtime.ProcessService.DefaultExecutionHandler, IdeApp.Workbench.ProgressMonitors);
+			ExecutionContext context = new ExecutionContext (Runtime.ProcessService.DefaultExecutionHandler, IdeApp.Workbench.ProgressMonitors, IdeApp.Workspace.ActiveExecutionTarget);
 			return CanExecute (entry, context);
 		}
 		
 		public bool CanExecute (IBuildTarget entry, IExecutionHandler handler)
 		{
-			ExecutionContext context = new ExecutionContext (handler, IdeApp.Workbench.ProgressMonitors);
+			ExecutionContext context = new ExecutionContext (handler, IdeApp.Workbench.ProgressMonitors, IdeApp.Workspace.ActiveExecutionTarget);
 			return entry.CanExecute (context, IdeApp.Workspace.ActiveConfiguration);
 		}
 		
@@ -860,7 +884,7 @@ namespace MonoDevelop.Ide
 		
 		public IAsyncOperation Execute (IBuildTarget entry, IExecutionHandler handler)
 		{
-			ExecutionContext context = new ExecutionContext (handler, IdeApp.Workbench.ProgressMonitors);
+			ExecutionContext context = new ExecutionContext (handler, IdeApp.Workbench.ProgressMonitors, IdeApp.Workspace.ActiveExecutionTarget);
 			return Execute (entry, context);
 		}
 		
@@ -873,7 +897,7 @@ namespace MonoDevelop.Ide
 			DispatchService.ThreadDispatch (delegate {
 				ExecuteSolutionItemAsync (monitor, entry, context);
 			});
-			currentRunOperation = monitor.AsyncOperation;
+			CurrentRunOperation = monitor.AsyncOperation;
 			currentRunOperationOwner = entry;
 			currentRunOperation.Completed += delegate {
 			 	DispatchService.GuiDispatch (() => {
@@ -1009,8 +1033,12 @@ namespace MonoDevelop.Ide
 				tempProject.Dispose ();
 				return res;
 			}
-			else
-				return false;
+			else {
+				var cmd = Runtime.ProcessService.CreateCommand (file);
+				if (context.ExecutionHandler.CanExecute (cmd))
+					return true;
+			}
+			return false;
 		}
 		
 		public IAsyncOperation ExecuteFile (string file, IExecutionHandler handler)
@@ -1117,6 +1145,7 @@ namespace MonoDevelop.Ide
 				}
 			} catch (Exception ex) {
 				monitor.ReportError (GettextCatalog.GetString ("Build failed."), ex);
+				result.AddError ("Build failed. See the build log for details.");
 			} finally {
 				tt.Trace ("Done building");
 			}
@@ -1212,7 +1241,9 @@ namespace MonoDevelop.Ide
 					string errorString = GettextCatalog.GetPluralString("{0} error", "{0} errors", result.ErrorCount, result.ErrorCount);
 					string warningString = GettextCatalog.GetPluralString("{0} warning", "{0} warnings", result.WarningCount, result.WarningCount);
 
-					if (result.ErrorCount == 0 && result.WarningCount == 0 && lastResult.FailedBuildCount == 0) {
+					if (monitor.IsCancelRequested) {
+						monitor.ReportError (GettextCatalog.GetString ("Build canceled."), null);
+					} else if (result.ErrorCount == 0 && result.WarningCount == 0 && lastResult.FailedBuildCount == 0) {
 						monitor.ReportSuccess (GettextCatalog.GetString ("Build successful."));
 					} else if (result.ErrorCount == 0 && result.WarningCount > 0) {
 						monitor.ReportWarning(GettextCatalog.GetString("Build: ") + errorString + ", " + warningString);
@@ -1616,9 +1647,12 @@ namespace MonoDevelop.Ide
 			ProjectFile sourceParent = null;
 			if (filesToMove.Count == 1 && sourceProject != null) {
 				var pf = filesToMove[0];
-				if (pf != null && pf.HasChildren)
-					foreach (ProjectFile child in pf.DependentChildren)
+				if (pf != null && pf.HasChildren) {
+					foreach (ProjectFile child in pf.DependentChildren) {
+						filesToRemove.Add (child);
 						filesToMove.Add (child);
+					}
+				}
 				sourceParent = pf;
 			}
 			
@@ -1644,8 +1678,11 @@ namespace MonoDevelop.Ide
 					return;
 				}
 			}
-			
-			monitor.BeginTask (GettextCatalog.GetString ("Copying files..."), filesToMove.Count);
+
+			if (removeFromSource)
+				monitor.BeginTask (GettextCatalog.GetString ("Moving files..."), filesToMove.Count);
+			else
+				monitor.BeginTask (GettextCatalog.GetString ("Copying files..."), filesToMove.Count);
 			
 			ProjectFile targetParent = null;
 			foreach (ProjectFile file in filesToMove) {
@@ -1670,12 +1707,20 @@ namespace MonoDevelop.Ide
 						FilePath fileDir = newFile.ParentDirectory;
 						if (!Directory.Exists (fileDir) && !file.IsLink)
 							FileService.CreateDirectory (fileDir);
-						if (removeFromSource)
+						if (removeFromSource) {
+							// File.Move() does not have an overwrite argument and will fail if the destFile path exists, however, the user
+							// has already chosen to overwrite the destination file.
+							if (File.Exists (newFile))
+								File.Delete (newFile);
+
 							FileService.MoveFile (sourceFile, newFile);
-						else
+						} else
 							FileService.CopyFile (sourceFile, newFile);
 					} catch (Exception ex) {
-						monitor.ReportError (GettextCatalog.GetString ("File '{0}' could not be created.", newFile), ex);
+						if (removeFromSource)
+							monitor.ReportError (GettextCatalog.GetString ("File '{0}' could not be moved.", sourceFile), ex);
+						else
+							monitor.ReportError (GettextCatalog.GetString ("File '{0}' could not be copied.", sourceFile), ex);
 						monitor.Step (1);
 						continue;
 					}
@@ -1894,6 +1939,15 @@ namespace MonoDevelop.Ide
 		
 		// Fired just before an entry is added to a combine
 		public event AddEntryEventHandler AddingEntryToCombine;
+
+		public event EventHandler CurrentRunOperationChanged;
+		public event EventHandler<EditReferencesEventArgs> BeforeEditReferences;
+		protected virtual void OnCurrentRunOperationChanged (EventArgs e)
+		{
+			var handler = CurrentRunOperationChanged;
+			if (handler != null)
+				handler (this, e);
+		}
 	}
 	
 	class ParseProgressMonitorFactory: IProgressMonitorFactory
@@ -2010,7 +2064,33 @@ namespace MonoDevelop.Ide
 			
 			return new ProviderProxy (data, file.SourceEncoding, file.HadBOM);
 		}
-		
+
+		/// <summary>
+		/// Performs an edit operation on a text file regardless of it's open in the IDE or not.
+		/// </summary>
+		/// <returns><c>true</c>, if file operation was saved, <c>false</c> otherwise.</returns>
+		/// <param name="filePath">File path.</param>
+		/// <param name="operation">The operation.</param>
+		public bool EditFile (FilePath filePath, Action<TextEditorData> operation)
+		{
+			if (operation == null)
+				throw new ArgumentNullException ("operation");
+			bool hadBom;
+			Encoding encoding;
+			bool isOpen;
+			var data = GetTextEditorData (filePath, out hadBom, out encoding, out isOpen);
+			operation (data);
+			if (!isOpen) {
+				try { 
+					Mono.TextEditor.Utils.TextFileUtility.WriteText (filePath, data.Text, encoding, hadBom);
+				} catch (Exception e) {
+					LoggingService.LogError ("Error while saving changes to : " + filePath, e);
+					return false;
+				}
+			}
+			return true;
+		}
+
 		public TextEditorData GetTextEditorData (FilePath filePath)
 		{
 			bool isOpen;
@@ -2019,17 +2099,26 @@ namespace MonoDevelop.Ide
 
 		public TextEditorData GetTextEditorData (FilePath filePath, out bool isOpen)
 		{
+			bool hadBom;
+			Encoding encoding;
+			return GetTextEditorData (filePath, out hadBom, out encoding, out isOpen);
+		}
+
+		public TextEditorData GetTextEditorData (FilePath filePath, out bool hadBom, out Encoding encoding, out bool isOpen)
+		{
 			foreach (var doc in IdeApp.Workbench.Documents) {
 				if (doc.FileName == filePath) {
 					isOpen = true;
+					hadBom = false;
+					encoding = Encoding.Default;
 					return doc.Editor;
 				}
 			}
-			
-			TextFile file = TextFile.ReadFile (filePath);
+
+			var text = Mono.TextEditor.Utils.TextFileUtility.ReadAllText (filePath, out hadBom, out encoding);
 			TextEditorData data = new TextEditorData ();
 			data.Document.FileName = filePath;
-			data.Text = file.Text;
+			data.Text = text;
 			isOpen = false;
 			return data;
 		}

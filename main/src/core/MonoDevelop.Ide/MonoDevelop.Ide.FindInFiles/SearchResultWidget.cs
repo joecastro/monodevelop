@@ -193,14 +193,12 @@ namespace MonoDevelop.Ide.FindInFiles
 		protected override void OnRealized ()
 		{
 			base.OnRealized ();
-			highlightStyle = SyntaxModeService.GetColorStyle (Style, PropertyService.Get ("ColorScheme", "Default"));
+			highlightStyle = SyntaxModeService.GetColorStyle (IdeApp.Preferences.ColorScheme);
 		}
 		
 		protected override void OnStyleSet (Gtk.Style previousStyle)
 		{
 			base.OnStyleSet (previousStyle);
-			if (highlightStyle != null)
-				highlightStyle.UpdateFromGtkStyle (Style);
 		}
 
 		void ButtonPinClicked (object sender, EventArgs e)
@@ -358,7 +356,9 @@ namespace MonoDevelop.Ide.FindInFiles
 			var searchResult = (SearchResult)store.GetValue (iter, SearchResultColumn);
 			if (searchResult == null)
 				return;
-			fileNamePixbufRenderer.Pixbuf = DesktopService.GetPixbufForFile (searchResult.FileName, IconSize.Menu);
+			if (searchResult.Pixbuf == null)
+				searchResult.Pixbuf = DesktopService.GetPixbufForFile (searchResult.FileName, IconSize.Menu);
+			fileNamePixbufRenderer.Pixbuf = searchResult.Pixbuf;
 		}
 
 
@@ -377,11 +377,13 @@ namespace MonoDevelop.Ide.FindInFiles
 			var searchResult = (SearchResult)store.GetValue (iter, SearchResultColumn);
 			if (searchResult == null)
 				return;
-			var doc = GetDocument (searchResult);
-			if (doc == null)
-				return;
-			int lineNr = doc.OffsetToLineNumber (searchResult.Offset);
-			fileNameRenderer.Markup = MarkupText (System.IO.Path.GetFileName (searchResult.FileName) + ":" + lineNr, didRead);
+			if (searchResult.LineNumber <= 0) {
+				var doc = GetDocument (searchResult);
+				if (doc == null)
+					return;
+				searchResult.LineNumber = doc.OffsetToLineNumber (searchResult.Offset);
+			}
+			fileNameRenderer.Markup = MarkupText (System.IO.Path.GetFileName (searchResult.FileName) + ":" + searchResult.LineNumber, didRead);
 		}
 		
 		int CompareLineNumbers (TreeModel model, TreeIter first, TreeIter second)
@@ -459,33 +461,54 @@ namespace MonoDevelop.Ide.FindInFiles
 				textRenderer.Markup = "Can't create document for:" + searchResult.FileName;
 				return;
 			}
-			int lineNr = doc.OffsetToLineNumber (searchResult.Offset);
-			DocumentLine line = doc.GetLine (lineNr);
-			if (line == null) {
-				textRenderer.Markup = "Invalid line number " + lineNr + " from offset: " + searchResult.Offset;
-				return;
-			}
 			bool isSelected = treeviewSearchResults.Selection.IterIsSelected (iter);
-			int indent = line.GetIndentation (doc).Length;
-			var data = new Mono.TextEditor.TextEditorData (doc);
-			data.ColorStyle = highlightStyle;
-			string markup = doc.SyntaxMode != null ?
-				data.GetMarkup (line.Offset + indent, line.Length - indent, true, !isSelected, false) :
-				GLib.Markup.EscapeText (doc.GetTextAt (line.Offset, line.Length));
-			
-			if (!isSelected) {
+
+			if (searchResult.Markup == null) {
+				if (searchResult.LineNumber <= 0)
+					searchResult.LineNumber = doc.OffsetToLineNumber (searchResult.Offset); 
+				DocumentLine line = doc.GetLine (searchResult.LineNumber );
+				if (line == null) {
+					textRenderer.Markup = "Invalid line number " + searchResult.LineNumber + " from offset: " + searchResult.Offset;
+					return;
+				}
+				int indent = line.GetIndentation (doc).Length;
+				var data = new Mono.TextEditor.TextEditorData (doc);
+				data.ColorStyle = highlightStyle;
+				var lineText = doc.GetTextAt (line.Offset + indent, line.Length - indent);
 				int col = searchResult.Offset - line.Offset - indent;
-				string tag;
-				int pos1 = FindPosition (markup, col, out tag);
-				int pos2 = FindPosition (markup, col + searchResult.Length, out tag);
-				if (pos1 >= 0 && pos2 >= 0) {
-					markup = tag.StartsWith ("span") ? markup.Insert (pos2, "</span></span><" + tag + ">") : markup.Insert (pos2, "</span>");
-					Color searchColor = Mono.TextEditor.Highlighting.ColorScheme.ToGdkColor (highlightStyle.SearchTextBg);
+				// search result contained part of the indent.
+				if (col + searchResult.Length < lineText.Length)
+					lineText = doc.GetTextAt (line.Offset, line.Length);
+
+				var markup = doc.SyntaxMode != null ?
+				data.GetMarkup (line.Offset + indent, line.Length - indent, true, !isSelected, false) :
+				GLib.Markup.EscapeText (lineText);
+				searchResult.Markup = AdjustColors (markup.Replace ("\t", new string (' ', TextEditorOptions.DefaultOptions.TabSize)));
+
+				uint start;
+				uint end;
+				try {
+					start = (uint)TextViewMargin.TranslateIndexToUTF8 (lineText, col);
+					end = (uint)TextViewMargin.TranslateIndexToUTF8 (lineText, col + searchResult.Length);
+				} catch (Exception e) {
+					LoggingService.LogError ("Exception while translating index to utf8 (column was:" +col + " search result length:" + searchResult.Length + " line text:" + lineText + ")", e);
+					return;
+				}
+				searchResult.StartIndex = start;
+				searchResult.EndIndex = end;
+			}
+
+
+			try {
+				textRenderer.Markup = searchResult.Markup;
+
+				if (!isSelected) {
+					var searchColor = highlightStyle.SearchResult.GetColor("color");
 					double b1 = Mono.TextEditor.HslColor.Brightness (searchColor);
-					double b2 = Mono.TextEditor.HslColor.Brightness (AdjustColor (Style.Base (StateType.Normal), highlightStyle.Default.Color));
+					double b2 = Mono.TextEditor.HslColor.Brightness (AdjustColor (Style.Base (StateType.Normal), (Mono.TextEditor.HslColor)highlightStyle.PlainText.Foreground));
 					double delta = Math.Abs (b1 - b2);
 					if (delta < 0.1) {
-						Mono.TextEditor.HslColor color1 = highlightStyle.SearchTextBg;
+						Mono.TextEditor.HslColor color1 = highlightStyle.SearchResult.GetColor("color");
 						if (color1.L + 0.5 > 1.0) {
 							color1.L -= 0.5;
 						} else {
@@ -493,14 +516,17 @@ namespace MonoDevelop.Ide.FindInFiles
 						}
 						searchColor = color1;
 					}
-					markup = markup.Insert (pos1, "<span background=\"" + SyntaxMode.ColorToPangoMarkup (searchColor) + "\">");
+					var attr = new Pango.AttrBackground ((ushort)(searchColor.R * ushort.MaxValue), (ushort)(searchColor.G * ushort.MaxValue), (ushort)(searchColor.B * ushort.MaxValue));
+					attr.StartIndex = searchResult.StartIndex;
+					attr.EndIndex = searchResult.EndIndex;
+
+					using (var list = textRenderer.Attributes.Copy ()) {
+						list.Insert (attr);
+						textRenderer.Attributes = list;
+					}
 				}
-			}
-			string markupText = AdjustColors (markup.Replace ("\t", new string (' ', TextEditorOptions.DefaultOptions.TabSize)));
-			try {
-				textRenderer.Markup = markupText;
 			} catch (Exception e) {
-				LoggingService.LogError ("Error whil setting the text renderer markup to: " + markup, e);
+				LoggingService.LogError ("Error whil setting the text renderer markup to: " + searchResult.Markup, e);
 			}
 		}
 		

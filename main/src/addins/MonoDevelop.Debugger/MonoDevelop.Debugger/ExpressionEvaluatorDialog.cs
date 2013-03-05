@@ -41,6 +41,7 @@ namespace MonoDevelop.Debugger
 			valueTree.Frame = DebuggingService.CurrentFrame;
 			valueTree.AllowExpanding = true;
 			entry.KeyPressEvent += OnEditKeyPress;
+			entry.FocusOutEvent += OnEditFocusOut;
 			CompletionWindowManager.WindowClosed += HandleCompletionWindowClosed;
 		}
 
@@ -71,35 +72,37 @@ namespace MonoDevelop.Debugger
 			UpdateExpression ();
 		}
 
-		private void HandleCompletionWindowClosed (object sender, EventArgs e)
+		void HandleCompletionWindowClosed (object sender, EventArgs e)
 		{
 			currentCompletionData = null;
 		}
 
 		[GLib.ConnectBeforeAttribute]
-		void OnEditKeyPress (object s, Gtk.KeyPressEventArgs args)
+		void OnEditKeyPress (object sender, KeyPressEventArgs args)
 		{
-			Gtk.Entry entry = (Gtk.Entry)s;
-			
 			if (currentCompletionData != null) {
 				bool ret = CompletionWindowManager.PreProcessKeyEvent (args.Event.Key, (char)args.Event.Key, args.Event.State);
 				CompletionWindowManager.PostProcessKeyEvent (args.Event.Key, (char)args.Event.Key, args.Event.State);
 				args.RetVal = ret;
 			}
 			
-			Gtk.Application.Invoke (delegate {
+			Application.Invoke (delegate {
 				char c = (char)Gdk.Keyval.ToUnicode (args.Event.KeyValue);
 				if (currentCompletionData == null && IsCompletionChar (c)) {
 					string exp = entry.Text.Substring (0, entry.CursorPosition);
 					currentCompletionData = GetCompletionData (exp);
 					if (currentCompletionData != null) {
 						DebugCompletionDataList dataList = new DebugCompletionDataList (currentCompletionData);
-						CodeCompletionContext ctx = ((ICompletionWidget)this).CreateCodeCompletionContext (entry.CursorPosition - currentCompletionData.ExpressionLenght);
+						CodeCompletionContext ctx = ((ICompletionWidget)this).CreateCodeCompletionContext (entry.CursorPosition - currentCompletionData.ExpressionLength);
 						CompletionWindowManager.ShowWindow (null, c, dataList, this, ctx);
-					} else
-						currentCompletionData = null;
+					}
 				}
 			});
+		}
+
+		void OnEditFocusOut (object sender, FocusOutEventArgs args)
+		{
+			CompletionWindowManager.HideWindow ();
 		}
 
 		bool IsCompletionChar (char c)
@@ -167,7 +170,7 @@ namespace MonoDevelop.Debugger
 			c.TriggerOffset = triggerOffset;
 			c.TriggerLineOffset = c.TriggerOffset;
 			c.TriggerTextHeight = entry.SizeRequest ().Height;
-			c.TriggerWordLength = currentCompletionData.ExpressionLenght;
+			c.TriggerWordLength = currentCompletionData.ExpressionLength;
 			
 			int x, y;
 			int tx, ty;

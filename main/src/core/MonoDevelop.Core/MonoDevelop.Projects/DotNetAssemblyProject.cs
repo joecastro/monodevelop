@@ -51,7 +51,7 @@ namespace MonoDevelop.Projects
 		{
 			// DotNetAssemblyProject can only generate assemblies for the regular framework.
 			// Special frameworks such as Moonlight or MonoTouch must subclass DotNetProject directly.
-			if (!framework.IsCompatibleWithFramework (TargetFrameworkMoniker.NET_1_1))
+			if (!framework.CanReferenceAssembliesTargetingFramework (TargetFrameworkMoniker.NET_1_1))
 				return false;
 			else
 				return base.SupportsFramework (framework);
@@ -65,6 +65,7 @@ namespace MonoDevelop.Projects
 			case "MSBuild08":
 				return TargetFrameworkMoniker.NET_2_0;
 			case "MSBuild10":
+			case "MSBuild12":
 				return TargetFrameworkMoniker.NET_4_0;
 			}
 			return Services.ProjectService.DefaultTargetFramework.Id;

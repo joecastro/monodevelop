@@ -5,6 +5,11 @@
 	<ExtensionNodeSet id="MonoDevelop.Components.Commands.ItemSet"/>
 </ExtensionPoint>
 
+<ExtensionPoint path = "/MonoDevelop/Ide/AppMenu" name = "App menu">
+	<Description>App menu items.</Description>
+	<ExtensionNodeSet id="MonoDevelop.Components.Commands.ItemSet"/>
+</ExtensionPoint>
+
 <Extension path = "/MonoDevelop/Ide/MainMenu">
 	<ItemSet id = "File" _label = "_File">
 		<ItemSet id = "New" _label = "_New">
@@ -42,7 +47,9 @@
 		<SeparatorItem id = "ExitSeparator" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.CloseWorkspace" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.CloseFile" _label = "_Close" />
-		<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.Exit" />
+		<Condition id="Platform" value="!mac">
+			<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.Exit" />
+		</Condition>
 	</ItemSet>
         
 	<ItemSet id = "Edit" _label = "_Edit">
@@ -92,7 +99,7 @@
 		<SeparatorItem id = "Separator6" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.TextEditorCommands.ToggleBlockSelectionMode" />
 		<SeparatorItem id = "optionssep5" />
-		<Condition id="Platform" value="!windows">
+		<Condition id="Platform" value="linux">
 			<CommandItem id = "MonoDevelop.Ide.Commands.EditCommands.MonodevelopPreferences" />
 			<CommandItem id = "MonoDevelop.Ide.Commands.EditCommands.DefaultPolicies" />
 		</Condition>
@@ -106,9 +113,6 @@
 		<SeparatorItem id = "ViewSeparator2" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ViewCommands.ViewList" />
 		<SeparatorItem id = "ViewSeparator3" />
-		<ItemSet id = "ViewToolbars" _label = "Toolbars">
-			<CommandItem id = "MonoDevelop.Components.Commands.CommandSystemCommands.ToolbarList" />
-		</ItemSet>
 		<SeparatorItem id = "ViewItemsSeparator" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ViewCommands.ZoomIn" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ViewCommands.ZoomOut" />
@@ -140,8 +144,7 @@
 		<CommandItem id = "MonoDevelop.Ide.Commands.SearchCommands.GotoLineNumber" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.SearchCommands.GotoFile" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.SearchCommands.GotoType" />
-		
-		<CommandItem id = "MonoDevelop.Ide.NavigateToDialog.Commands.NavigateTo" />
+		<CommandItem id = "MonoDevelop.Components.MainToolbar.Commands.NavigateTo" />
 		
 		<SeparatorItem id = "ViewItemsSeparator3" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.NavigationCommands.NavigateBack" />
@@ -188,6 +191,8 @@
 		<CommandItem id = "MonoDevelop.Ide.Commands.ProjectCommands.Build" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ProjectCommands.Rebuild" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ProjectCommands.Clean" />
+		<SeparatorItem id = "Separator1" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.ProjectCommands.Stop" />
 	</ItemSet>
 
 	<ItemSet id = "Run" _label = "_Run">
@@ -200,7 +205,9 @@
 	</ItemSet>
 
 	<ItemSet id = "Tools" _label = "_Tools">
-		<CommandItem id = "MonoDevelop.Ide.Commands.ToolCommands.AddinManager" />
+		<Condition id="Platform" value="!mac">
+			<CommandItem id = "MonoDevelop.Ide.Commands.ToolCommands.AddinManager" />
+		</Condition>
 		<SeparatorItem id ="AddinManagerSeparator" /> 
 		<CommandItem id = "MonoDevelop.Ide.Commands.ToolCommands.ToolList" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.ToolCommands.InstrumentationViewer" />
@@ -217,11 +224,11 @@
 		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.PrevWindow" />
 		<SeparatorItem id ="NxtPrvSeparator" /> 
 		<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.CloseAllFiles" />
-		<SeparatorItem id ="SplitSeparator" /> 
+<!--		<SeparatorItem id ="SplitSeparator" /> 
 		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.SplitWindowVertically" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.SplitWindowHorizontally" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.UnsplitWindow" />
-		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.SwitchSplitWindow" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.SwitchSplitWindow" />-->
 		<SeparatorItem id = "contentSep" />
 		<CommandItem id = "MonoDevelop.Ide.Commands.WindowCommands.OpenWindowList" />
 	</ItemSet> 
@@ -245,9 +252,25 @@
 			</ItemSet>
 		</ItemSet>
 		<SeparatorItem id = "Separator3" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.HelpCommands.OpenLogDirectory" />
 		<LinkItem id = "ReportBug" _label = "Report a Bug" link = "http://bugzilla.xamarin.com/enter_bug.cgi?alias=&amp;assigned_to=&amp;blocked=&amp;bug_file_loc=http%3A%2F%2F&amp;bug_severity=Normal&amp;bug_status=NEW&amp;cf_foundby=---&amp;cf_nts_priority=&amp;cf_nts_support_num=&amp;cf_partnerid=&amp;comment=Description%20of%20Problem%3A%0D%0A%0D%0A%0D%0ASteps%20to%20reproduce%20the%20problem%3A%0D%0A1.%20%0D%0A2.%20%0D%0A%0D%0A%0D%0AActual%20Results%3A%0D%0A%0D%0A%0D%0AExpected%20Results%3A%0D%0A%0D%0A%0D%0AHow%20often%20does%20this%20happen%3F%20%0D%0A%0D%0A%0D%0AAdditional%20Information%3A%0D%0A%0D%0A%0D%0A&amp;component=&amp;contenttypeentry=&amp;contenttypemethod=autodetect&amp;contenttypeselection=text%2Fplain&amp;data=&amp;deadline=&amp;dependson=&amp;description=&amp;estimated_time=0.0&amp;flag_type-2=X&amp;form_name=enter_bug&amp;keywords=&amp;maketemplate=Remember%20values%20as%20bookmarkable%20template&amp;op_sys=Other&amp;priority=P5%20-%20None&amp;product=MonoDevelop%20&amp;qa_contact=&amp;rep_platform=Other&amp;short_desc=&amp;version=unspecified" />
-		<CommandItem id = "MonoDevelop.Ide.Commands.HelpCommands.About" />
+		<Condition id = "Platform" value = "!mac">
+			<CommandItem id = "MonoDevelop.Ide.Commands.HelpCommands.About" />
+		</Condition>
 	</ItemSet>
+</Extension>
+
+<Extension path="/MonoDevelop/Ide/AppMenu">
+	<Condition id = "Platform" value = "mac">
+		<CommandItem id = "MonoDevelop.Ide.Commands.HelpCommands.About" />
+		<CommandItem id = "MonoDevelop.Ide.Updater.UpdateCommands.CheckForUpdates" />
+		<SeparatorItem id = "PreferencesSeparator" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.EditCommands.MonodevelopPreferences" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.EditCommands.DefaultPolicies" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.ToolCommands.AddinManager" />
+		<SeparatorItem id = "QuitSeparator" />
+		<CommandItem id = "MonoDevelop.Ide.Commands.FileCommands.Exit" />
+	</Condition>
 </Extension>
 
 </ExtensionModel>

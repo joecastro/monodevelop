@@ -29,11 +29,10 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
-using System.Xml;
 using System.Globalization;
 using System.Runtime.Serialization.Formatters.Binary;
 using Mono.Addins;
-using MonoDevelop.Core.AddIns;
+using MonoDevelop.Core.ProgressMonitoring;
 using MonoDevelop.Projects;
 using MonoDevelop.Projects.Extensions;
 using MonoDevelop.Core.Serialization;
@@ -82,7 +81,23 @@ namespace MonoDevelop.Projects.Formats.MSBuild
 			Services.ProjectService.DataContextChanged += delegate {
 				dataContext = null;
 			};
+
+			PropertyService.PropertyChanged += HandlePropertyChanged;
+			DefaultBuildWithMSBuild = PropertyService.Get ("MonoDevelop.Ide.BuildWithMSBuild", false);
+			DefaultMSBuildVerbosity = PropertyService.Get ("MonoDevelop.Ide.MSBuildVerbosity", MSBuildVerbosity.Normal);
 		}
+
+		static void HandlePropertyChanged (object sender, PropertyChangedEventArgs e)
+		{
+			if (e.Key == "MonoDevelop.Ide.BuildWithMSBuild") {
+				DefaultBuildWithMSBuild = (bool) e.NewValue;
+			} else if (e.Key == "MonoDevelop.Ide.MSBuildVerbosity") {
+				DefaultMSBuildVerbosity = (MSBuildVerbosity) e.NewValue;
+			}
+		}
+
+		internal static bool DefaultBuildWithMSBuild { get; private set; }
+		internal static MSBuildVerbosity DefaultMSBuildVerbosity { get; private set; }
 		
 		public static SolutionEntityItem LoadItem (IProgressMonitor monitor, string fileName, MSBuildFileFormat expectedFormat, string typeGuid, string itemGuid)
 		{
@@ -152,6 +167,22 @@ namespace MonoDevelop.Projects.Formats.MSBuild
 			}
 		}
 		
+		public static bool SupportsProjectType (string projectFile)
+		{
+			if (!string.IsNullOrWhiteSpace (projectFile)) {
+				// If we have a project file, try to load it.
+				try {
+					using (var monitor = new ConsoleProgressMonitor ()) {
+						return MSBuildProjectService.LoadItem (monitor, projectFile, null, null, null) != null;
+					}
+				} catch {
+					return false;
+				}
+			}
+
+			return false;
+		}
+
 		internal static DotNetProjectSubtypeNode GetDotNetProjectSubtype (string typeGuids)
 		{
 			if (!string.IsNullOrEmpty (typeGuids)) {
@@ -589,13 +620,24 @@ namespace MonoDevelop.Projects.Formats.MSBuild
 		
 		internal protected override DataNode OnSerialize (SerializationContext serCtx, object mapData, object value)
 		{
-			return new DataValue (Name, (bool)value ? "True" : "False");
+			return new MSBuildBoolDataValue (Name, (bool) value);
 		}
 		
 		internal protected override object OnDeserialize (SerializationContext serCtx, object mapData, DataNode data)
 		{
 			return String.Equals (((DataValue)data).Value, "true", StringComparison.OrdinalIgnoreCase);
 		}
+	}
+
+	class MSBuildBoolDataValue : DataValue
+	{
+		public MSBuildBoolDataValue (string name, bool value)
+			: base (name, value ? "True" : "False")
+		{
+			RawValue = value;
+		}
+
+		public bool RawValue { get; private set; }
 	}
 	
 	public class MSBuildResourceHandler: IResourceHandler

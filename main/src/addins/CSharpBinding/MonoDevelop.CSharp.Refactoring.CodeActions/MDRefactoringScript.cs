@@ -116,8 +116,13 @@ namespace MonoDevelop.CSharp.Refactoring.CodeActions
 			}
 			operationsRunning++;
 			mode.StartMode ();
+			DesktopService.RemoveWindowShadow (helpWindow);
 			mode.Exited += delegate(object s, InsertionCursorEventArgs iCArgs) {
 				if (iCArgs.Success) {
+					if (iCArgs.InsertionPoint.LineAfter == NewLineInsertion.None && 
+					    iCArgs.InsertionPoint.LineBefore == NewLineInsertion.None && nodes.Count () > 1) {
+						iCArgs.InsertionPoint.LineAfter = NewLineInsertion.BlankLine;
+					}
 					foreach (var node in nodes.Reverse ()) {
 						var output = OutputNode (CodeGenerationService.CalculateBodyIndentLevel (declaringType), node);
 						var offset = document.Editor.LocationToOffset (iCArgs.InsertionPoint.Location);
@@ -157,6 +162,20 @@ namespace MonoDevelop.CSharp.Refactoring.CodeActions
 					);
 					return;
 				}
+				if (declaringType.Kind == TypeKind.Enum) {
+					foreach (var node in nodes.Reverse ()) {
+						var output = OutputNode (CodeGenerationService.CalculateBodyIndentLevel (declaringType), node);
+						var point = mode.InsertionPoints.First ();
+						var offset = loadedDocument.Editor.LocationToOffset (point.Location);
+						var text = output.Text + ",";
+						var delta = point.Insert (editor, text);
+						output.RegisterTrackedSegments (this, delta + offset);
+					}
+					tcs.SetResult (null);
+					return;
+				}
+
+
 				var helpWindow = new Mono.TextEditor.PopupWindow.InsertionCursorLayoutModeHelpWindow ();
 				helpWindow.TransientFor = MonoDevelop.Ide.IdeApp.Workbench.RootWindow;
 				helpWindow.TitleText = operation;
@@ -167,10 +186,15 @@ namespace MonoDevelop.CSharp.Refactoring.CodeActions
 				mode.StartMode ();
 				mode.Exited += delegate(object s, InsertionCursorEventArgs iCArgs) {
 					if (iCArgs.Success) {
+						if (iCArgs.InsertionPoint.LineAfter == NewLineInsertion.None && 
+						    iCArgs.InsertionPoint.LineBefore == NewLineInsertion.None && nodes.Count () > 1) {
+							iCArgs.InsertionPoint.LineAfter = NewLineInsertion.BlankLine;
+						}
 						foreach (var node in nodes.Reverse ()) {
 							var output = OutputNode (CodeGenerationService.CalculateBodyIndentLevel (declaringType), node);
 							var offset = loadedDocument.Editor.LocationToOffset (iCArgs.InsertionPoint.Location);
-							var delta = iCArgs.InsertionPoint.Insert (editor, output.Text);
+							var text = output.Text;
+							var delta = iCArgs.InsertionPoint.Insert (editor, text);
 							output.RegisterTrackedSegments (this, delta + offset);
 						}
 						tcs.SetResult (null);
@@ -203,6 +227,7 @@ namespace MonoDevelop.CSharp.Refactoring.CodeActions
 				tle.Exited += (sender, e) => DisposeOnClose (); 
 				tle.StartMode ();
 				document.Editor.CurrentMode = tle;
+				document.ReparseDocument ();
 			}
 			return tcs.Task;
 		}
@@ -249,7 +274,7 @@ namespace MonoDevelop.CSharp.Refactoring.CodeActions
 			
 			var content = context.Document.Editor.Text;
 			
-			var types = new List<TypeDeclaration> (context.Unit.GetTypes ());
+			var types = new List<EntityDeclaration> (context.Unit.GetTypes ());
 			types.Sort ((x, y) => y.StartLocation.CompareTo (x.StartLocation));
 
 			foreach (var removeType in types) {

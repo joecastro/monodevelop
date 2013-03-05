@@ -43,6 +43,11 @@ namespace MonoDevelop.Components
 			                        (double)color.Blue / ushort.MaxValue);
 		}
 		
+		public static Gdk.Color ToGdkColor (this Cairo.Color color)
+		{
+			return new Gdk.Color ((byte)(color.R * 255d), (byte)(color.G * 255d), (byte)(color.B * 255d));
+		}
+		
 		/// <summary>
 		/// Makes a color lighter or darker
 		/// </summary>
@@ -55,6 +60,18 @@ namespace MonoDevelop.Components
 			HslColor c = color;
 			c.L += lightAmount;
 			return c;
+		}
+
+		public static Cairo.Color AddLight (this Cairo.Color color, double lightAmount)
+		{
+			HslColor c = color;
+			c.L += lightAmount;
+			return c;
+		}
+
+		public static Gtk.Widget ToGtkWidget (this Xwt.Widget widget)
+		{
+			return (Gtk.Widget) Xwt.Engine.WidgetRegistry.GetNativeWidget (widget);
 		}
 		
 		public static void EnableAutoTooltips (this Gtk.TreeView tree)
@@ -178,6 +195,234 @@ namespace MonoDevelop.Components
 				data.ShowTimer = 0;
 			}
 		}
+
+		public static Gdk.Rectangle ToScreenCoordinates (Gtk.Widget widget, Gdk.Window w, Gdk.Rectangle rect)
+		{
+			return new Gdk.Rectangle (ToScreenCoordinates (widget, w, rect.X, rect.Y), rect.Size);
+		}
+
+		public static Gdk.Point ToScreenCoordinates (Gtk.Widget widget, Gdk.Window w, int x, int y)
+		{
+			int ox, oy;
+			w.GetOrigin (out ox, out oy);
+			ox += widget.Allocation.X;
+			oy += widget.Allocation.Y;
+			return new Gdk.Point (ox + x, oy + y);
+		}
+
+		public static Gdk.Rectangle ToWindowCoordinates (Gtk.Widget widget, Gdk.Window w, Gdk.Rectangle rect)
+		{
+			return new Gdk.Rectangle (ToWindowCoordinates (widget, w, rect.X, rect.Y), rect.Size);
+		}
+		
+		public static Gdk.Point ToWindowCoordinates (Gtk.Widget widget, Gdk.Window w, int x, int y)
+		{
+			int ox, oy;
+			w.GetOrigin (out ox, out oy);
+			ox += widget.Allocation.X;
+			oy += widget.Allocation.Y;
+			return new Gdk.Point (x - ox, y - oy);
+		}
+
+		public static T ReplaceWithWidget<T> (this Gtk.Widget oldWidget, T newWidget, bool transferChildren = false) where T:Gtk.Widget
+		{
+			Gtk.Container parent = (Gtk.Container) oldWidget.Parent;
+			if (parent == null)
+				throw new InvalidOperationException ();
+
+			if (parent is Box) {
+				var box = (Box) parent;
+				var bc = (Gtk.Box.BoxChild) parent [oldWidget];
+				box.Add (newWidget);
+				var nc = (Gtk.Box.BoxChild) parent [newWidget];
+				nc.Expand = bc.Expand;
+				nc.Fill = bc.Fill;
+				nc.PackType = bc.PackType;
+				nc.Padding = bc.Padding;
+				nc.Position = bc.Position;
+				box.Remove (oldWidget);
+			}
+			else if (parent is Table) {
+				var table = (Table) parent;
+				var bc = (Gtk.Table.TableChild) parent [oldWidget];
+				table.Add (newWidget);
+				var nc = (Gtk.Table.TableChild) parent [newWidget];
+				nc.BottomAttach = bc.BottomAttach;
+				nc.LeftAttach = bc.LeftAttach;
+				nc.RightAttach = bc.RightAttach;
+				nc.TopAttach = bc.TopAttach;
+				nc.XOptions = bc.XOptions;
+				nc.XPadding = bc.XPadding;
+				nc.YOptions = bc.YOptions;
+				nc.YPadding = bc.YPadding;
+				table.Remove (oldWidget);
+			}
+			else if (parent is Paned) {
+				var paned = (Paned) parent;
+				var bc = (Gtk.Paned.PanedChild) parent [oldWidget];
+				var resize = bc.Resize;
+				var shrink = bc.Shrink;
+				if (oldWidget == paned.Child1) {
+					paned.Remove (oldWidget);
+					paned.Add1 (newWidget);
+				} else {
+					paned.Remove (oldWidget);
+					paned.Add2 (newWidget);
+				}
+				var nc = (Gtk.Paned.PanedChild) parent [newWidget];
+				nc.Resize = resize;
+				nc.Shrink = shrink;
+			}
+			else
+				throw new NotSupportedException ();
+
+			if (transferChildren) {
+				if (newWidget is Paned && oldWidget is Paned) {
+					var panedOld = (Paned) oldWidget;
+					var panedNew = (Paned) (object) newWidget;
+					if (panedOld.Child1 != null) {
+						var c = panedOld.Child1;
+						var bc = (Gtk.Paned.PanedChild) panedOld [c];
+						var resize = bc.Resize;
+						var shrink = bc.Shrink;
+						panedOld.Remove (c);
+						panedNew.Add1 (c);
+						var nc = (Gtk.Paned.PanedChild) panedNew [c];
+						nc.Resize = resize;
+						nc.Shrink = shrink;
+					}
+					if (panedOld.Child2 != null) {
+						var c = panedOld.Child2;
+						var bc = (Gtk.Paned.PanedChild) panedOld [c];
+						var resize = bc.Resize;
+						var shrink = bc.Shrink;
+						panedOld.Remove (c);
+						panedNew.Add2 (c);
+						var nc = (Gtk.Paned.PanedChild) panedNew [c];
+						nc.Resize = resize;
+						nc.Shrink = shrink;
+					}
+				}
+				else
+					throw new NotSupportedException ();
+			}
+
+			newWidget.Visible = oldWidget.Visible;
+			return newWidget;
+		}
+
+		public static bool ScreenSupportsARGB ()
+		{
+			return Gdk.Screen.Default.IsComposited;
+		}
+
+		/// <summary>
+		/// This method can be used to get a reliave Leave event for a widget, which
+		/// is not fired if the pointer leaves the widget to enter a child widget.
+		/// To ubsubscribe the event, dispose the object returned by the method.
+		/// </summary>
+		public static IDisposable SubscribeLeaveEvent (this Gtk.Widget w, System.Action leaveHandler)
+		{
+			return new LeaveEventData (w, leaveHandler);
+		}
+	}
+
+	class LeaveEventData: IDisposable
+	{
+		public System.Action LeaveHandler;
+		public Gtk.Widget RootWidget;
+		public bool Inside;
+
+		public LeaveEventData (Gtk.Widget w, System.Action leaveHandler)
+		{
+			RootWidget = w;
+			LeaveHandler = leaveHandler;
+			if (w.IsRealized) {
+				RootWidget.Unrealized += HandleUnrealized;
+				TrackLeaveEvent (w);
+			}
+			else
+				w.Realized += HandleRealized;
+		}
+
+		void HandleRealized (object sender, EventArgs e)
+		{
+			RootWidget.Realized -= HandleRealized;
+			RootWidget.Unrealized += HandleUnrealized;
+			TrackLeaveEvent (RootWidget);
+		}
+
+		void HandleUnrealized (object sender, EventArgs e)
+		{
+			RootWidget.Unrealized -= HandleUnrealized;
+			UntrackLeaveEvent (RootWidget);
+			RootWidget.Realized += HandleRealized;
+			if (Inside) {
+				Inside = false;
+				LeaveHandler ();
+			}
+		}
+
+		public void Dispose ()
+		{
+			if (RootWidget.IsRealized) {
+				UntrackLeaveEvent (RootWidget);
+				RootWidget.Unrealized -= HandleUnrealized;
+			} else {
+				RootWidget.Realized -= HandleRealized;
+			}
+		}
+
+		public void TrackLeaveEvent (Gtk.Widget w)
+		{
+			w.LeaveNotifyEvent += HandleLeaveNotifyEvent;
+			w.EnterNotifyEvent += HandleEnterNotifyEvent;
+			if (w is Gtk.Container) {
+				((Gtk.Container)w).Added += HandleAdded;
+				((Gtk.Container)w).Removed += HandleRemoved;
+				foreach (var c in ((Gtk.Container)w).Children)
+					TrackLeaveEvent (c);
+			}
+		}
+
+		void UntrackLeaveEvent (Gtk.Widget w)
+		{
+			w.LeaveNotifyEvent -= HandleLeaveNotifyEvent;
+			w.EnterNotifyEvent -= HandleEnterNotifyEvent;
+			if (w is Gtk.Container) {
+				((Gtk.Container)w).Added -= HandleAdded;
+				((Gtk.Container)w).Removed -= HandleRemoved;
+				foreach (var c in ((Gtk.Container)w).Children)
+					UntrackLeaveEvent (c);
+			}
+		}
+
+		void HandleRemoved (object o, RemovedArgs args)
+		{
+			UntrackLeaveEvent (args.Widget);
+		}
+
+		void HandleAdded (object o, AddedArgs args)
+		{
+			TrackLeaveEvent (args.Widget);
+		}
+
+		void HandleEnterNotifyEvent (object o, EnterNotifyEventArgs args)
+		{
+			Inside = true;
+		}
+
+		void HandleLeaveNotifyEvent (object o, LeaveNotifyEventArgs args)
+		{
+			Inside = false;
+
+			// Delay the call to the leave handler since the pointer may be
+			// entering a child widget, in which case the event doesn't have to be fired
+			Gtk.Application.Invoke (delegate {
+				if (!Inside)
+					LeaveHandler ();
+			});
+		}
 	}
 
 	class TreeViewTooltipsData
@@ -193,7 +438,7 @@ namespace MonoDevelop.Components
 		TreeViewColumn col;
 		TreeView tree;
 		TreeIter iter;
-		
+
 		public bool MouseIsOver;
 		
 		public CellTooltipWindow (TreeView tree, TreeViewColumn col, TreePath path)
@@ -234,30 +479,37 @@ namespace MonoDevelop.Components
 		protected override bool OnExposeEvent (Gdk.EventExpose evnt)
 		{
 			base.OnExposeEvent (evnt);
-			Gdk.Rectangle rect = Allocation;
-			col.CellSetCellData (tree.Model, iter, false, false);
-			int x = 1;
+
+			Gdk.Rectangle expose = Allocation;
 			Gdk.Color save = Gdk.Color.Zero;
+			int x = 1;
+
+			col.CellSetCellData (tree.Model, iter, false, false);
+
 			foreach (CellRenderer cr in col.CellRenderers) {
 				if (!cr.Visible)
 					continue;
+
 				if (cr is CellRendererText) {
 					save = ((CellRendererText)cr).ForegroundGdk;
 					((CellRendererText)cr).ForegroundGdk = Style.Foreground (State);
 				}
+
 				int sp, wi, he, xo, yo;
 				col.CellGetPosition (cr, out sp, out wi);
-				Gdk.Rectangle colcrect = new Gdk.Rectangle (x, rect.Y, wi, rect.Height - 2);
-				cr.GetSize (tree, ref colcrect, out xo, out yo, out wi, out he);
-				int leftMargin = (int) ((colcrect.Width - wi) * cr.Xalign);
-				int rightMargin = (int) ((colcrect.Height - he) * cr.Yalign);
-				Gdk.Rectangle crect = new Gdk.Rectangle (colcrect.X + leftMargin, colcrect.Y + rightMargin + 1, wi, he);
-				cr.Render (this.GdkWindow, tree, colcrect, crect, rect, CellRendererState.Focused);
-				x += colcrect.Width + col.Spacing + 1;
+				Gdk.Rectangle bgrect = new Gdk.Rectangle (x, expose.Y, wi, expose.Height - 2);
+				cr.GetSize (tree, ref bgrect, out xo, out yo, out wi, out he);
+				int leftMargin = (int) ((bgrect.Width - wi) * cr.Xalign);
+				int topMargin = (int) ((bgrect.Height - he) * cr.Yalign);
+				Gdk.Rectangle cellrect = new Gdk.Rectangle (bgrect.X + leftMargin, bgrect.Y + topMargin + 1, wi, he);
+				cr.Render (this.GdkWindow, this, bgrect, cellrect, expose, CellRendererState.Focused);
+				x += bgrect.Width + col.Spacing + 1;
+
 				if (cr is CellRendererText) {
 					((CellRendererText)cr).ForegroundGdk = save;
 				}
 			}
+
 			return true;
 		}
 		

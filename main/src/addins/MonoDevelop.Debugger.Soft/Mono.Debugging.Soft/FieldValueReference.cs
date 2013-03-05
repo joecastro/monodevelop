@@ -1,10 +1,11 @@
 // 
 // FieldValueReference.cs
 //  
-// Author:
-//       Lluis Sanchez Gual <lluis@novell.com>
+// Authors: Lluis Sanchez Gual <lluis@novell.com>
+//          Jeffrey Stedfast <jeff@xamarin.com>
 // 
 // Copyright (c) 2009 Novell, Inc (http://www.novell.com)
+// Copyright (c) 2012 Xamarin Inc. (http://www.xamarin.com)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -96,11 +97,14 @@ namespace Mono.Debugging.Soft
 
 		public override object Value {
 			get {
-				if (obj == null)
+				if (obj == null) {
+					// If the type hasn't already been loaded, invoke the .cctor() for types w/ the BeforeFieldInit attribute.
+					Context.Adapter.ForceLoadType (Context, declaringType);
+
 					return declaringType.GetValue (field);
-				else if (obj is ObjectMirror)
+				} else if (obj is ObjectMirror) {
 					return ((ObjectMirror)obj).GetValue (field);
-				else if (obj is StructMirror) {
+				} else if (obj is StructMirror) {
 					StructMirror sm = (StructMirror)obj;
 					int idx = 0;
 					foreach (FieldInfoMirror f in sm.Type.GetFields ()) {

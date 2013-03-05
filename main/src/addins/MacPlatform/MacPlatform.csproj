@@ -46,6 +46,7 @@
     <Reference Include="MonoMac">
       <HintPath>..\..\..\external\monomac\src\MonoMac.dll</HintPath>
     </Reference>
+    <Reference Include="Mono.Cairo" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\core\MonoDevelop.Core\MonoDevelop.Core.csproj">
@@ -96,6 +97,9 @@
   <ItemGroup>
     <EmbeddedResource Include="MacPlatform.addin.xml">
       <LogicalName>MacPlatform.addin.xml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="maintoolbarbg.png">
+      <LogicalName>maintoolbarbg.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

@@ -195,7 +195,7 @@ namespace Mono.TextEditor
 			this.baseOffset = baseOffset;
 			this.endOffset = editor.Caret.Offset;
 			tooltipProvider = new TextLinkTooltipProvider (this);
-			this.Editor.tooltipProviders.Insert (0, tooltipProvider);
+			this.Editor.GetTextEditorData ().tooltipProviders.Insert (0, tooltipProvider);
 			this.SetCaretPosition = true;
 			this.SelectPrimaryLink = true;
 		}
@@ -238,6 +238,9 @@ namespace Mono.TextEditor
 				closedLink = null;
 				if (window == null) {
 					window = new ListWindow<string> ();
+					window.DoubleClicked += delegate {
+						CompleteWindow ();
+					};
 					window.DataProvider = link;
 					
 					DocumentLocation loc = Editor.Document.OffsetToLocation (BaseOffset + link.PrimaryLink.Offset);
@@ -536,7 +539,7 @@ namespace Mono.TextEditor
 		}
 	}
 
-	public class TextLinkTooltipProvider : ITooltipProvider
+	public class TextLinkTooltipProvider : TooltipProvider
 	{
 		TextLinkEditMode mode;
 
@@ -546,7 +549,7 @@ namespace Mono.TextEditor
 		}
 
 		#region ITooltipProvider implementation 
-		public TooltipItem GetItem (TextEditor Editor, int offset)
+		public override TooltipItem GetItem (TextEditor Editor, int offset)
 		{
 			int o = offset - mode.BaseOffset;
 			for (int i = 0; i < mode.Links.Count; i++) {
@@ -558,7 +561,7 @@ namespace Mono.TextEditor
 			//return mode.Links.First (l => l.PrimaryLink != null && l.PrimaryLink.Offset <= o && o <= l.PrimaryLink.EndOffset);
 		}
 
-		public Gtk.Window CreateTooltipWindow (TextEditor Editor, int offset, Gdk.ModifierType modifierState, TooltipItem item)
+		protected override Gtk.Window CreateTooltipWindow (TextEditor Editor, int offset, Gdk.ModifierType modifierState, TooltipItem item)
 		{
 			TextLink link = item.Item as TextLink;
 			if (link == null || string.IsNullOrEmpty (link.Tooltip))
@@ -569,21 +572,16 @@ namespace Mono.TextEditor
 			return window;
 		}
 
-		public void GetRequiredPosition (TextEditor Editor, Gtk.Window tipWindow, out int requiredWidth, out double xalign)
+		protected override void GetRequiredPosition (TextEditor Editor, Gtk.Window tipWindow, out int requiredWidth, out double xalign)
 		{
 			TooltipWindow win = (TooltipWindow)tipWindow;
 			requiredWidth = win.SetMaxWidth (win.Screen.Width);
 			xalign = 0.5;
 		}
-
-		public bool IsInteractive (TextEditor Editor, Gtk.Window tipWindow)
-		{
-			return false;
-		}
 		#endregion 
 	}
 
-	public class TextLinkMarker : TextMarker, IBackgroundMarker
+	public class TextLinkMarker : TextLineMarker, IBackgroundMarker, IGutterMarker
 	{
 		TextLinkEditMode mode;
 
@@ -696,11 +694,11 @@ namespace Mono.TextEditor
 						drawBg = false;
 						Cairo.Color fillGc, rectangleGc;
 						if (segment == link.PrimaryLink) {
-							fillGc = isPrimaryHighlighted ? Editor.ColorStyle.PrimaryTemplateHighlighted.CairoBackgroundColor : Editor.ColorStyle.PrimaryTemplate.CairoBackgroundColor;
-							rectangleGc = isPrimaryHighlighted ? Editor.ColorStyle.PrimaryTemplateHighlighted.CairoBackgroundColor : Editor.ColorStyle.PrimaryTemplate.CairoBackgroundColor;
+							fillGc = isPrimaryHighlighted ? Editor.ColorStyle.PrimaryTemplateHighlighted.GetColor ("secondcolor") : Editor.ColorStyle.PrimaryTemplate.GetColor ("secondcolor");
+							rectangleGc = isPrimaryHighlighted ? Editor.ColorStyle.PrimaryTemplateHighlighted.GetColor ("secondcolor") : Editor.ColorStyle.PrimaryTemplate.GetColor ("secondcolor");
 						} else {
-							fillGc = isPrimaryHighlighted ? Editor.ColorStyle.SecondaryTemplateHighlighted.CairoBackgroundColor : Editor.ColorStyle.SecondaryTemplate.CairoBackgroundColor;
-							rectangleGc = isPrimaryHighlighted ? Editor.ColorStyle.SecondaryTemplateHighlighted.CairoColor : Editor.ColorStyle.SecondaryTemplate.CairoColor;
+							fillGc = isPrimaryHighlighted ? Editor.ColorStyle.SecondaryTemplateHighlighted.GetColor ("secondcolor") : Editor.ColorStyle.SecondaryTemplate.GetColor ("secondcolor");
+							rectangleGc = isPrimaryHighlighted ? Editor.ColorStyle.SecondaryTemplateHighlighted.GetColor ("color") : Editor.ColorStyle.SecondaryTemplate.GetColor ("color");
 						}
 						
 						// Draw segment
@@ -719,5 +717,33 @@ namespace Mono.TextEditor
 			}
 			return true;
 		}
+
+		#region IGutterMarker implementation
+		public void DrawLineNumber (TextEditor editor, double width, Cairo.Context cr, Cairo.Rectangle area, DocumentLine lineSegment, int line, double x, double y, double lineHeight)
+		{
+			var lineNumberBgGC = editor.ColorStyle.LineNumbers.Background;
+			var lineNumberGC = editor.ColorStyle.LineNumbers.Foreground;
+
+			cr.Rectangle (x, y, width, lineHeight);
+			cr.Color = editor.Caret.Line == line ? editor.ColorStyle.LineMarker.GetColor ("color") : lineNumberGC;
+			cr.Fill ();
+			
+			if (line <= editor.Document.LineCount) {
+				// Due to a mac? gtk bug I need to re-create the layout here
+				// otherwise I get pango exceptions.
+				using (var layout = PangoUtil.CreateLayout (editor)) {
+					layout.FontDescription = editor.Options.Font;
+					layout.Width = (int)width;
+					layout.Alignment = Pango.Alignment.Right;
+					layout.SetText (line.ToString ());
+					cr.Save ();
+					cr.Translate (x + (int)width + (editor.Options.ShowFoldMargin ? 0 : -2), y);
+					cr.Color = lineNumberBgGC;
+					cr.ShowLayout (layout);
+					cr.Restore ();
+				}
+			}
+		}
+		#endregion
 	}
 }

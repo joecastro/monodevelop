@@ -45,12 +45,18 @@ namespace MonoDevelop.Ide
 			bool value;
 			
 			if (!TrustedCertificates.TryGetValue (certificateFingerprint, out value)) {
-				value = MessageService.AskQuestion (
-					"Untrusted HTTP certificate detected",
-					string.Format ("Do you want to temporarily trust this certificate in order to" +
-					" connect to the server at {0}?", uri),
-					AlertButton.Yes, AlertButton.No) == AlertButton.Yes;
-				TrustedCertificates [certificateFingerprint] = value;
+				using (var handle = new System.Threading.ManualResetEvent (false)) {
+					Gtk.Application.Invoke (delegate {
+						value = MessageService.AskQuestion (
+							"Untrusted HTTP certificate detected",
+							string.Format ("Do you want to temporarily trust this certificate in order to" +
+							" connect to the server at {0}?", uri),
+							AlertButton.Yes, AlertButton.No) == AlertButton.Yes;
+						TrustedCertificates [certificateFingerprint] = value;
+						handle.Set ();
+					});
+					handle.WaitOne ();
+				}
 			}
 
 			return value;

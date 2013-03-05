@@ -57,6 +57,7 @@ namespace MonoDevelop.Refactoring
 		CurrentRefactoryOperations,
 		GotoDeclaration, // in 'referenced' in IdeViMode.cs as string
 		FindReferences,
+		FindAllReferences,
 		FindDerivedClasses,
 		DeclareLocal,
 		RemoveUnusedImports,
@@ -109,9 +110,9 @@ namespace MonoDevelop.Refactoring
 		
 		class JumpTo
 		{
-			INamedElement el;
+			object el;
 			
-			public JumpTo (INamedElement el)
+			public JumpTo (object el)
 			{
 				this.el = el;
 			}
@@ -123,9 +124,13 @@ namespace MonoDevelop.Refactoring
 					IdeApp.Workbench.OpenDocument (e.Region.FileName, e.Region.BeginLine, e.Region.BeginColumn);
 					return;
 				} 
-				IdeApp.ProjectOperations.JumpToDeclaration (el);
+				if (el is IVariable)
+					IdeApp.ProjectOperations.JumpToDeclaration ((IVariable)el);
+				if (el is INamedElement)
+					IdeApp.ProjectOperations.JumpToDeclaration ((INamedElement)el);
 			}
 		}
+
 		
 		class GotoBase 
 		{
@@ -173,15 +178,20 @@ namespace MonoDevelop.Refactoring
 		class FindRefs 
 		{
 			object obj;
-			
-			public FindRefs (object obj)
+			bool allOverloads;
+			public FindRefs (object obj, bool all)
 			{
 				this.obj = obj;
+				this.allOverloads = all;
 			}
 			
 			public void Run ()
 			{
-				FindReferencesHandler.FindRefs (obj);
+				if (allOverloads) {
+					FindAllReferencesHandler.FindRefs (obj);
+				} else {
+					FindReferencesHandler.FindRefs (obj);
+				}
 			}
 		}
 		
@@ -200,6 +210,11 @@ namespace MonoDevelop.Refactoring
 			}
 		}
 
+		IEnumerable<MonoDevelop.CodeActions.CodeAction> validActions;
+		MonoDevelop.Ide.TypeSystem.ParsedDocument lastDocument;
+
+		DocumentLocation lastLocation;
+
 		protected override void Update (CommandArrayInfo ainfo)
 		{
 			var doc = IdeApp.Workbench.ActiveDocument;
@@ -213,7 +228,7 @@ namespace MonoDevelop.Refactoring
 			ResolveResult resolveResult;
 			object item = GetItem (doc, out resolveResult);
 			bool added = false;
-			
+
 			var options = new RefactoringOptions (doc) {
 				ResolveResult = resolveResult,
 				SelectedItem = item
@@ -252,7 +267,12 @@ namespace MonoDevelop.Refactoring
 
 			var loc = doc.Editor.Caret.Location;
 			bool first = true;
-			foreach (var fix_ in RefactoringService.GetValidActions (doc, loc).Result) {
+			if (lastDocument != doc.ParsedDocument || loc != lastLocation) {
+				validActions = RefactoringService.GetValidActions (doc, loc).Result;
+				lastLocation = loc;
+				lastDocument = doc.ParsedDocument;
+			}
+			foreach (var fix_ in validActions) {
 				var fix = fix_;
 				if (first) {
 					first = false;
@@ -267,7 +287,7 @@ namespace MonoDevelop.Refactoring
 				added = true;
 			}
 			
-			if (IdeApp.ProjectOperations.CanJumpToDeclaration (item as INamedElement)) {
+			if (IdeApp.ProjectOperations.CanJumpToDeclaration (item)) {
 				var type = item as ICSharpCode.NRefactory.TypeSystem.IType;
 				if (type != null && type.GetDefinition ().Parts.Count > 1) {
 					var declSet = new CommandInfoSet ();
@@ -277,13 +297,15 @@ namespace MonoDevelop.Refactoring
 						declSet.CommandInfos.Add (string.Format (GettextCatalog.GetString ("{0}, Line {1}"), FormatFileName (part.Region.FileName), part.Region.BeginLine), new System.Action (new JumpTo (part).Run));
 					ainfo.Add (declSet);
 				} else {
-					ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.GotoDeclaration), new System.Action (new JumpTo (item as INamedElement).Run));
+					ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.GotoDeclaration), new System.Action (new JumpTo (item).Run));
 				}
 				added = true;
 			}
-			
+
 			if (item is IEntity || item is ITypeParameter || item is IVariable) {
-				ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.FindReferences), new System.Action (new FindRefs (item).Run));
+				ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.FindReferences), new System.Action (new FindRefs (item, false).Run));
+				if (doc.HasProject && ReferenceFinder.HasOverloads (doc.Project.ParentSolution, item))
+					ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.FindAllReferences), new System.Action (new FindRefs (item, true).Run));
 				added = true;
 			}
 			

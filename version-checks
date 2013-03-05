@@ -17,7 +17,7 @@ DEP[0]=md-addins
 DEP_NAME[0]=MDADDINS
 DEP_PATH[0]=${top_srcdir}/../md-addins
 DEP_MODULE[0]=git@github.com:xamarin/md-addins.git
-DEP_NEEDED_VERSION[0]=d2fb1fd0164ed93d8d68f4b4250e300161c0f17b
+DEP_NEEDED_VERSION[0]=ba9b2749f18e7dc43d182b8042feeef45d7e33c0
 DEP_BRANCH_AND_REMOTE[0]="master origin/master"
 
 # heap-shot
@@ -25,7 +25,7 @@ DEP[1]=heap-shot
 DEP_NAME[1]=HEAPSHOT
 DEP_PATH[1]=${top_srcdir}/../heap-shot
 DEP_MODULE[1]=git://github.com/mono/heap-shot.git
-DEP_NEEDED_VERSION[1]=552005b42194a80af313393f06ca7dcfe91ec957
+DEP_NEEDED_VERSION[1]=8822b2285aa09daae71c48f4a1ebf73be751155c
 DEP_BRANCH_AND_REMOTE[1]="master origin/master"
 
 # other dependencies
@@ -72,7 +72,7 @@ function reset_version
 	echo "*** [$NAME] git checkout $NEEDED_BRANCH"
 	git checkout $NEEDED_BRANCH || git checkout -b $BRANCH_AND_REMOTE
 	echo "*** [$NAME] git reset --hard $NEEDED_VERSION"
-	git reset --hard $NEEDED_VERSION && git submodule update --init --recursive
+	(git reset --hard $NEEDED_VERSION && git submodule update --init --recursive) || exit 1;
 
 	cd "$top_srcdir"
 }

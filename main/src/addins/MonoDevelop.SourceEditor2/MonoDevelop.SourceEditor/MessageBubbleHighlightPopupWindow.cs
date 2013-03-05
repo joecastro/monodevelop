@@ -45,7 +45,7 @@ namespace MonoDevelop.SourceEditor
 			
 			ExpandWidth = 36;
 			ExpandHeight = 2;
-			BounceEasing = Easing.Sine;
+			BounceEasing = Mono.TextEditor.Theatrics.Easing.Sine;
 			Duration = 150;
 		}
 	
@@ -129,7 +129,7 @@ namespace MonoDevelop.SourceEditor
 					cr.Fill ();
 				}
 				
-				cr.Color = Editor.ColorStyle.GetChunkStyle ("bubble.error").CairoColor;
+				cr.Color = Editor.ColorStyle.MessageBubbleError.GetColor ("color");
 				
 				int layoutWidth, layoutHeight;
 				marker.Layouts [0].Layout.GetPixelSize (out layoutWidth, out layoutHeight);

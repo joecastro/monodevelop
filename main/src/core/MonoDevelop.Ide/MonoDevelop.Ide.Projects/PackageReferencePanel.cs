@@ -155,7 +155,7 @@ namespace MonoDevelop.Ide.Projects
 				}
 				string pkg = systemAssembly.Package.GetDisplayName ();
 				if (systemAssembly.Package.IsInternalPackage)
-					pkg += " " + GettextCatalog.GetString ("(Provided by MonoDevelop)");
+					pkg += " " + GettextCatalog.GetString ("(Provided by {0})", BrandingService.ApplicationName);
 				
 				store.AppendValues (name, 
 					version, 
@@ -197,7 +197,7 @@ namespace MonoDevelop.Ide.Projects
 					if (netProject != null) {
 						if (ProjectReferencePanel.ProjectReferencesProject (references, null, netProject, configureProject.Name))
 							continue;
-					    else if (!configureProject.TargetFramework.IsCompatibleWithFramework (netProject.TargetFramework.Id))
+					    else if (!configureProject.TargetFramework.CanReferenceAssembliesTargetingFramework (netProject.TargetFramework))
 							continue;
 					}
 					store.AppendValues (name, "", null, selected, projectEntry.Name, "", projectEntry.StockIcon, matchRank, ReferenceType.Project);

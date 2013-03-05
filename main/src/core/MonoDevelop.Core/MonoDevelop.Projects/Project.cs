@@ -117,6 +117,24 @@ namespace MonoDevelop.Projects
 			}
 		}
 
+		[ProjectPathItemProperty ("BaseIntermediateOutputPath")]
+		FilePath baseIntermediateOutputPath;
+
+		public virtual FilePath BaseIntermediateOutputPath {
+			get {
+				if (!baseIntermediateOutputPath.IsNullOrEmpty)
+					return baseIntermediateOutputPath;
+				return BaseDirectory.Combine ("obj");
+			}
+			set {
+				if (value.IsNullOrEmpty)
+					value = FilePath.Null;
+				if (baseIntermediateOutputPath == value)
+					return;
+				NotifyModified ("BaseIntermediateOutputPath");
+			}
+		}
+
 		/// <summary>
 		/// Gets the type of the project.
 		/// </summary>
@@ -391,7 +409,7 @@ namespace MonoDevelop.Projects
 		bool UsingMSBuildEngine ()
 		{
 			var msbuildHandler = ItemHandler as MonoDevelop.Projects.Formats.MSBuild.MSBuildProjectHandler;
-			return msbuildHandler != null && msbuildHandler.UseXbuild;
+			return msbuildHandler != null && msbuildHandler.UseMSBuildEngine;
 		}
 
 		protected override BuildResult OnBuild (IProgressMonitor monitor, ConfigurationSelector configuration)

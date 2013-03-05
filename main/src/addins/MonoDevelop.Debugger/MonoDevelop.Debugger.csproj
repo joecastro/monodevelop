@@ -55,10 +55,6 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="Mono.Cairo" />
-    <Reference Include="Mono.Addins, Version=0.4.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-      <Private>False</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\core\MonoDevelop.Core\MonoDevelop.Core.csproj">
@@ -84,6 +80,16 @@
     <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory\ICSharpCode.NRefactory.csproj">
       <Project>{3B2A5653-EC97-4001-BB9B-D90F1AF2C371}</Project>
       <Name>ICSharpCode.NRefactory</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins\Mono.Addins.csproj">
+      <Project>{91DD5A2D-9FE3-4C3C-9253-876141874DAD}</Project>
+      <Name>Mono.Addins</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\xwt\Xwt\Xwt.csproj">
+      <Project>{92494904-35FA-4DC9-BDE9-3A3E87AC49D3}</Project>
+      <Name>Xwt</Name>
       <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
@@ -126,13 +132,13 @@
     <Compile Include="MonoDevelop.Debugger\DebuggerEngine.cs" />
     <Compile Include="MonoDevelop.Debugger\DebuggerEngineExtensionNode.cs" />
     <Compile Include="MonoDevelop.Debugger\ExceptionCaughtDialog.cs" />
-    <Compile Include="gtk-gui\MonoDevelop.Debugger.ExceptionCaughtDialog.cs" />
     <Compile Include="MonoDevelop.Debugger.Visualizer\ValueVisualizerDialog.cs" />
     <Compile Include="gtk-gui\MonoDevelop.Debugger.Viewers.ValueVisualizerDialog.cs" />
     <Compile Include="MonoDevelop.Debugger.Visualizer\TextVisualizer.cs" />
     <Compile Include="MonoDevelop.Debugger.Visualizer\PixbufVisualizer.cs" />
     <Compile Include="MonoDevelop.Debugger.Visualizer\IValueVisualizer.cs" />
     <Compile Include="MonoDevelop.Debugger\ExpressionEvaluatorExtensionNode.cs" />
+    <Compile Include="gtk-gui\MonoDevelop.Debugger.ExceptionCaughtWidget.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MonoDevelop.Debugger.addin.xml">
@@ -149,33 +155,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="icons\debug-overlay-32.png">
       <LogicalName>debug-overlay-32.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-into-16.png">
-      <LogicalName>step-into-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-into-22.png">
-      <LogicalName>step-into-22.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-out-16.png">
-      <LogicalName>step-out-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-out-22.png">
-      <LogicalName>step-out-22.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-over-16.png">
-      <LogicalName>step-over-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-over-22.png">
-      <LogicalName>step-over-22.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-into-24.png">
-      <LogicalName>step-into-24.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-out-24.png">
-      <LogicalName>step-out-24.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\step-over-24.png">
-      <LogicalName>step-over-24.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\view-debug-breakpoints-16.png">
       <LogicalName>view-debug-breakpoints-16.png</LogicalName>
@@ -194,6 +173,33 @@
     </EmbeddedResource>
     <EmbeddedResource Include="icons\debug-overlay-24.png">
       <LogicalName>debug-overlay-24.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\icoDebug-Pause.png">
+      <LogicalName>icoDebug-Pause.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\icoDebug-StepIn.png">
+      <LogicalName>icoDebug-StepIn.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\icoDebug-StepOut.png">
+      <LogicalName>icoDebug-StepOut.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\icoDebug-StepOver.png">
+      <LogicalName>icoDebug-StepOver.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\icoDebug-Continue.png">
+      <LogicalName>icoDebug-Continue.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\bug-16.png">
+      <LogicalName>bug-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\lightning.png">
+      <LogicalName>lightning.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\MonoDevelop.Close.Selected.Over.png">
+      <LogicalName>MonoDevelop.Close.Selected.Over.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\MonoDevelop.Close.Selected.png">
+      <LogicalName>MonoDevelop.Close.Selected.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

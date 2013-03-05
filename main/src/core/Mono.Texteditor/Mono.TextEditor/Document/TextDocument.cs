@@ -64,11 +64,26 @@ namespace Mono.TextEditor
 			}
 		}
 		
+		string fileName;
 		public string FileName {
-			get;
-			set;
+			get {
+				return fileName;
+			}
+			set {
+				fileName = value;
+				OnFileNameChanged (EventArgs.Empty);
+			}
 		}	
-		
+
+		public event EventHandler FileNameChanged;
+
+		protected virtual void OnFileNameChanged (EventArgs e)
+		{
+			EventHandler handler = this.FileNameChanged;
+			if (handler != null)
+				handler (this, e);
+		}
+
 		public bool HeightChanged {
 			get;
 			set;
@@ -116,6 +131,7 @@ namespace Mono.TextEditor
 			splitter.LineChanged += SplitterLineSegmentTreeLineChanged;
 			splitter.LineRemoved += HandleSplitterLineSegmentTreeLineRemoved;
 			foldSegmentTree.tree.NodeRemoved += HandleFoldSegmentTreetreeNodeRemoved; 
+			textSegmentMarkerTree.InstallListener (this);
 		}
 
 		void HandleFoldSegmentTreetreeNodeRemoved (object sender, RedBlackTree<FoldSegment>.RedBlackTreeNodeEventArgs e)
@@ -166,8 +182,10 @@ namespace Mono.TextEditor
 			}
 			set {
 				var args = new DocumentChangeEventArgs (0, Text, value);
+				textSegmentMarkerTree.Clear ();
 				OnTextReplacing (args);
 				buffer.Text = value;
+				extendingTextMarkers = new List<TextLineMarker> ();
 				splitter.Initalize (value);
 				ClearFoldSegments ();
 				OnTextReplaced (args);
@@ -671,7 +689,33 @@ namespace Mono.TextEditor
 //				op.InformTextReplace (args);
 //			}
 		}
-		
+
+		internal int UndoBeginOffset {
+			get {
+				if (undoStack.Count == 0)
+					return -1;
+				var op = undoStack.Peek ();
+				while (op is AtomicUndoOperation)
+					op = ((AtomicUndoOperation)op).Operations.FirstOrDefault ();
+				if (op == null)
+					return -1;
+				return ((UndoOperation)op).Args.Offset;
+			}
+		}
+
+		internal int RedoBeginOffset {
+			get {
+				if (redoStack.Count == 0)
+					return -1;
+				var op = redoStack.Peek ();
+				while (op is AtomicUndoOperation)
+					op = ((AtomicUndoOperation)op).Operations.FirstOrDefault ();
+				if (op == null)
+					return -1;
+				return ((UndoOperation)op).Args.Offset;
+			}
+		}
+
 		public bool CanUndo {
 			get {
 				return this.undoStack.Count > 0 || currentAtomicOperation != null;
@@ -1220,7 +1264,9 @@ namespace Mono.TextEditor
 		
 		public event EventHandler<FoldSegmentEventArgs> Folded;
 		#endregion
-		
+
+		#region Text line markers
+
 		public event EventHandler<TextMarkerEvent> MarkerAdded;
 		protected virtual void OnMarkerAdded (TextMarkerEvent e)
 		{
@@ -1238,28 +1284,28 @@ namespace Mono.TextEditor
 		}
 
 		
-		List<TextMarker> extendingTextMarkers = new List<TextMarker> ();
+		List<TextLineMarker> extendingTextMarkers = new List<TextLineMarker> ();
 		public IEnumerable<DocumentLine> LinesWithExtendingTextMarkers {
 			get {
 				return from marker in extendingTextMarkers where marker.LineSegment != null select marker.LineSegment;
 			}
 		}
 		
-		public void AddMarker (int lineNumber, TextMarker marker)
+		public void AddMarker (int lineNumber, TextLineMarker marker)
 		{
 			AddMarker (this.GetLine (lineNumber), marker);
 		}
 		
-		public void AddMarker (DocumentLine line, TextMarker marker)
+		public void AddMarker (DocumentLine line, TextLineMarker marker)
 		{
 			AddMarker (line, marker, true);
 		}
-		
-		public void AddMarker (DocumentLine line, TextMarker marker, bool commitUpdate)
+
+		public void AddMarker (DocumentLine line, TextLineMarker marker, bool commitUpdate)
 		{
 			if (line == null || marker == null)
 				return;
-			if (marker is IExtendingTextMarker) {
+			if (marker is IExtendingTextLineMarker) {
 				lock (extendingTextMarkers) {
 					HeightChanged = true;
 					extendingTextMarkers.Add (marker);
@@ -1272,26 +1318,26 @@ namespace Mono.TextEditor
 				this.CommitLineUpdate (line);
 		}
 		
-		static int CompareMarkers (TextMarker left, TextMarker right)
+		static int CompareMarkers (TextLineMarker left, TextLineMarker right)
 		{
 			if (left.LineSegment == null || right.LineSegment == null)
 				return 0;
 			return left.LineSegment.Offset.CompareTo (right.LineSegment.Offset);
 		}
 		
-		public void RemoveMarker (TextMarker marker)
+		public void RemoveMarker (TextLineMarker marker)
 		{
 			RemoveMarker (marker, true);
 		}
 		
-		public void RemoveMarker (TextMarker marker, bool updateLine)
+		public void RemoveMarker (TextLineMarker marker, bool updateLine)
 		{
 			if (marker == null)
 				return;
 			var line = marker.LineSegment;
 			if (line == null)
 				return;
-			if (marker is IExtendingTextMarker) {
+			if (marker is IExtendingTextLineMarker) {
 				lock (extendingTextMarkers) {
 					HeightChanged = true;
 					extendingTextMarkers.Remove (marker);
@@ -1321,10 +1367,10 @@ namespace Mono.TextEditor
 		{
 			if (line == null || type == null)
 				return;
-			if (typeof(IExtendingTextMarker).IsAssignableFrom (type)) {
+			if (typeof(IExtendingTextLineMarker).IsAssignableFrom (type)) {
 				lock (extendingTextMarkers) {
 					HeightChanged = true;
-					foreach (TextMarker marker in line.Markers.Where (marker => marker is IExtendingTextMarker)) {
+					foreach (TextLineMarker marker in line.Markers.Where (marker => marker is IExtendingTextLineMarker)) {
 						extendingTextMarkers.Remove (marker);
 					}
 				}
@@ -1333,16 +1379,50 @@ namespace Mono.TextEditor
 			if (updateLine)
 				this.CommitLineUpdate (line);
 		}
+
+		#endregion
+
+		#region Text segment markers
+
+		SegmentTree<TextSegmentMarker> textSegmentMarkerTree = new SegmentTree<TextSegmentMarker> (); 
+
+		public IEnumerable<TextSegmentMarker> GetTextSegmentMarkersAt (DocumentLine line)
+		{
+			return textSegmentMarkerTree.GetSegmentsOverlapping (line.Segment);
+		}
+
+		public IEnumerable<TextSegmentMarker> GetTextSegmentMarkersAt (TextSegment segment)
+		{
+			return textSegmentMarkerTree.GetSegmentsOverlapping (segment);
+		}
+
+		public IEnumerable<TextSegmentMarker> GetTextSegmentMarkersAt (int offset)
+		{
+			return textSegmentMarkerTree.GetSegmentsAt (offset);
+		}
 		
+
+		public void AddMarker (TextSegmentMarker marker)
+		{
+			textSegmentMarkerTree.Add (marker);
+		}
+
+		public void RemoveMarker (TextSegmentMarker marker)
+		{
+			textSegmentMarkerTree.Remove (marker);
+		}
+
+		#endregion
+
 		void HandleSplitterLineSegmentTreeLineRemoved (object sender, LineEventArgs e)
 		{
-			foreach (TextMarker marker in e.Line.Markers) {
-				if (marker is IExtendingTextMarker) {
+			foreach (TextLineMarker marker in e.Line.Markers) {
+				if (marker is IExtendingTextLineMarker) {
 					lock (extendingTextMarkers) {
 						HeightChanged = true;
 						extendingTextMarkers.Remove (marker);
 					}
-					UnRegisterVirtualTextMarker ((IExtendingTextMarker)marker);
+					UnRegisterVirtualTextMarker ((IExtendingTextLineMarker)marker);
 				}
 			}
 		}
@@ -1551,15 +1631,15 @@ namespace Mono.TextEditor
 			}
 		}
 		
-		Dictionary<int, IExtendingTextMarker> virtualTextMarkers = new Dictionary<int, IExtendingTextMarker> ();
-		public void RegisterVirtualTextMarker (int lineNumber, IExtendingTextMarker marker)
+		Dictionary<int, IExtendingTextLineMarker> virtualTextMarkers = new Dictionary<int, IExtendingTextLineMarker> ();
+		public void RegisterVirtualTextMarker (int lineNumber, IExtendingTextLineMarker marker)
 		{
 			virtualTextMarkers[lineNumber] = marker;
 		}
 		
-		public IExtendingTextMarker GetExtendingTextMarker (int lineNumber)
+		public IExtendingTextLineMarker GetExtendingTextMarker (int lineNumber)
 		{
-			IExtendingTextMarker result;
+			IExtendingTextLineMarker result;
 			if (virtualTextMarkers.TryGetValue (lineNumber, out result))
 				return result;
 			return null;
@@ -1571,7 +1651,7 @@ namespace Mono.TextEditor
 		/// <param name='marker'>
 		/// marker.
 		/// </param>
-		public void UnRegisterVirtualTextMarker (IExtendingTextMarker marker)
+		public void UnRegisterVirtualTextMarker (IExtendingTextLineMarker marker)
 		{
 			var keys = new List<int> (from pair in virtualTextMarkers where pair.Value == marker select pair.Key);
 			keys.ForEach (key => { virtualTextMarkers.Remove (key); CommitLineUpdate (key); });

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -62,18 +62,6 @@
     <Reference Include="Mono.Cairo" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="Mono.Addins.Gui, Version=0.5.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="Mono.Addins, Version=0.5.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="Mono.Addins.Setup, Version=0.5.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\..\..\build\bin\Mono.Cecil.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonoDevelop.Core\MonoDevelop.Core.csproj">
@@ -100,6 +88,33 @@
       <Project>{53DCA265-3C3C-42F9-B647-F72BA678122B}</Project>
       <Name>ICSharpCode.NRefactory.CSharp</Name>
       <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\xwt\Xwt\Xwt.csproj">
+      <Project>{92494904-35FA-4DC9-BDE9-3A3E87AC49D3}</Project>
+      <Name>Xwt</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\xwt\Xwt.Gtk\Xwt.Gtk.csproj">
+      <Project>{C3887A93-B2BD-4097-8E2F-3A063EFF32FD}</Project>
+      <Name>Xwt.Gtk</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins\Mono.Addins.csproj">
+      <Project>{91DD5A2D-9FE3-4C3C-9253-876141874DAD}</Project>
+      <Name>Mono.Addins</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins.Setup\Mono.Addins.Setup.csproj">
+      <Project>{A85C9721-C054-4BD8-A1F3-0227615F0A36}</Project>
+      <Name>Mono.Addins.Setup</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins.Gui\Mono.Addins.Gui.csproj">
+      <Project>{FEC19BDA-4904-4005-8C09-68E82E8BEF6A}</Project>
+      <Name>Mono.Addins.Gui</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\cecil\Mono.Cecil.csproj">
+      <Project>{D68133BD-1E63-496E-9EDE-4FBDBF77B486}</Project>
+      <Name>Mono.Cecil</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -132,9 +147,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="templates\EmptyXMLFile.xft.xml">
       <LogicalName>EmptyXMLFile.xft.xml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.LinkOverlay.png">
-      <LogicalName>Icons.16x16.LinkOverlay.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\mono-powered.png">
       <LogicalName>mono-powered.png</LogicalName>
@@ -241,53 +253,26 @@
     <EmbeddedResource Include="icons\assembly-project-16.png">
       <LogicalName>assembly-project-16.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\author-information-16.png">
-      <LogicalName>author-information-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\author-information-24.png">
-      <LogicalName>author-information-24.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-16.png">
       <LogicalName>breakpoint-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-22.png">
-      <LogicalName>breakpoint-22.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-disable-all-16.png">
       <LogicalName>breakpoint-disable-all-16.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-disable-all-22.png">
-      <LogicalName>breakpoint-disable-all-22.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-disabled-16.png">
       <LogicalName>breakpoint-disabled-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-disabled-22.png">
-      <LogicalName>breakpoint-disabled-22.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-invalid-16.png">
       <LogicalName>breakpoint-invalid-16.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-invalid-22.png">
-      <LogicalName>breakpoint-invalid-22.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-new-16.png">
       <LogicalName>breakpoint-new-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-new-22.png">
-      <LogicalName>breakpoint-new-22.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-on-off-16.png">
       <LogicalName>breakpoint-on-off-16.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-on-off-22.png">
-      <LogicalName>breakpoint-on-off-22.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\breakpoint-remove-all-16.png">
       <LogicalName>breakpoint-remove-all-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\breakpoint-remove-all-22.png">
-      <LogicalName>breakpoint-remove-all-22.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\build-project-16.png">
       <LogicalName>build-project-16.png</LogicalName>
@@ -412,9 +397,6 @@
     <EmbeddedResource Include="icons\formatting-24.png">
       <LogicalName>formatting-24.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\GeneralWizardBackground">
-      <LogicalName>GeneralWizardBackground</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\gnome-fs-regular.png">
       <LogicalName>gnome-fs-regular.png</LogicalName>
     </EmbeddedResource>
@@ -426,114 +408,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="icons\hicolor_status_16x16_pin-up.png">
       <LogicalName>hicolor_status_16x16_pin-up.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ClearAllBookmarks">
-      <LogicalName>Icons.16x16.ClearAllBookmarks</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.CloseAllDocuments">
-      <LogicalName>Icons.16x16.CloseAllDocuments</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.CloseCombineIcon">
-      <LogicalName>Icons.16x16.CloseCombineIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ClosedFolderBitmap">
-      <LogicalName>Icons.16x16.ClosedFolderBitmap</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ClosedReferenceFolder">
-      <LogicalName>Icons.16x16.ClosedReferenceFolder</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ClosedResourceFolder">
-      <LogicalName>Icons.16x16.ClosedResourceFolder</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.CombineIcon">
-      <LogicalName>Icons.16x16.CombineIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.Empty">
-      <LogicalName>Icons.16x16.Empty</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.FindInFiles">
-      <LogicalName>Icons.16x16.FindInFiles</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.GotoNextbookmark">
-      <LogicalName>Icons.16x16.GotoNextbookmark</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.GotoPrevbookmark">
-      <LogicalName>Icons.16x16.GotoPrevbookmark</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.MiscFiles">
-      <LogicalName>Icons.16x16.MiscFiles</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.NewFolderIcon">
-      <LogicalName>Icons.16x16.NewFolderIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.OpenFolderBitmap">
-      <LogicalName>Icons.16x16.OpenFolderBitmap</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.OpenProjectIcon">
-      <LogicalName>Icons.16x16.OpenProjectIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.OpenReferenceFolder">
-      <LogicalName>Icons.16x16.OpenReferenceFolder</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.OpenResourceFolder">
-      <LogicalName>Icons.16x16.OpenResourceFolder</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.OutputIcon">
-      <LogicalName>Icons.16x16.OutputIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ReplaceInFiles">
-      <LogicalName>Icons.16x16.ReplaceInFiles</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ResourceFileIcon">
-      <LogicalName>Icons.16x16.ResourceFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.SaveAllIcon">
-      <LogicalName>Icons.16x16.SaveAllIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.SplitWindow">
-      <LogicalName>Icons.16x16.SplitWindow</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.TextFileIcon">
-      <LogicalName>Icons.16x16.TextFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.TipOfTheDay">
-      <LogicalName>Icons.16x16.TipOfTheDay</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.ToggleBookmark">
-      <LogicalName>Icons.16x16.ToggleBookmark</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.16x16.WebSearchIcon">
-      <LogicalName>Icons.16x16.WebSearchIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.22x22.ClearAllBookmarks.png">
-      <LogicalName>Icons.22x22.ClearAllBookmarks.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.22x22.GotoNextbookmark.png">
-      <LogicalName>Icons.22x22.GotoNextbookmark.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.22x22.GotoPrevbookmark.png">
-      <LogicalName>Icons.22x22.GotoPrevbookmark.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.22x22.ToggleBookmark.png">
-      <LogicalName>Icons.22x22.ToggleBookmark.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.24x24.SaveAllIcon">
-      <LogicalName>Icons.24x24.SaveAllIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.32x32.EmptyFileIcon">
-      <LogicalName>Icons.32x32.EmptyFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.32x32.HTMLFileIcon">
-      <LogicalName>Icons.32x32.HTMLFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.32x32.ResourceFileIcon">
-      <LogicalName>Icons.32x32.ResourceFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.32x32.TextFileIcon">
-      <LogicalName>Icons.32x32.TextFileIcon</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\Icons.32x32.XMLFileIcon">
-      <LogicalName>Icons.32x32.XMLFileIcon</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\keyword-16.png">
       <LogicalName>keyword-16.png</LogicalName>
@@ -598,15 +472,6 @@
     <EmbeddedResource Include="icons\project-reference-16.png">
       <LogicalName>project-reference-16.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="icons\project-reference-folder-16.png">
-      <LogicalName>project-reference-folder-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\project-reference-package-16.png">
-      <LogicalName>project-reference-package-16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="icons\project-reference-project-16.png">
-      <LogicalName>project-reference-project-16.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="icons\remove-namespace-16.png">
       <LogicalName>remove-namespace-16.png</LogicalName>
     </EmbeddedResource>
@@ -660,6 +525,18 @@
     </EmbeddedResource>
     <EmbeddedResource Include="icons\uncomment.png">
       <LogicalName>uncomment.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\letters-16.png">
+      <LogicalName>letters-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\hammer-16.png">
+      <LogicalName>hammer-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\drive-16.png">
+      <LogicalName>drive-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\monkey-16.png">
+      <LogicalName>monkey-16.png</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="icons\user-package.png">
       <LogicalName>user-package.png</LogicalName>
@@ -793,14 +670,411 @@
     <EmbeddedResource Include="branding\AboutImage.png">
       <LogicalName>AboutImage.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="branding\AboutImageSep.png">
-      <LogicalName>AboutImageSep.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="branding\SplashScreen.png">
       <LogicalName>SplashScreen.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="branding\WelcomePageContent.xml">
-      <LogicalName>WelcomePageContent.xml</LogicalName>
+    <EmbeddedResource Include="icons-components\MonoDevelop.Close.Over.png">
+      <LogicalName>MonoDevelop.Close.Over.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons-components\MonoDevelop.Close.Selected.Over.png">
+      <LogicalName>MonoDevelop.Close.Selected.Over.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons-components\MonoDevelop.Close.Selected.png">
+      <LogicalName>MonoDevelop.Close.Selected.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toolbar-runButton.png">
+      <LogicalName>toolbar-runButton.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toolbar-stepOutButton.png">
+      <LogicalName>toolbar-stepOutButton.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toolbar-stepInButton.png">
+      <LogicalName>toolbar-stepInButton.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toolbar-skipButton.png">
+      <LogicalName>toolbar-skipButton.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toolbar-pauseButton.png">
+      <LogicalName>toolbar-pauseButton.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-LeftCap-Normal.png">
+      <LogicalName>btDebugBase-LeftCap-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-LeftCap-Pressed.png">
+      <LogicalName>btDebugBase-LeftCap-Pressed.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-MidCap-Normal.png">
+      <LogicalName>btDebugBase-MidCap-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-MidCap-Pressed.png">
+      <LogicalName>btDebugBase-MidCap-Pressed.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-RightCap-Normal.png">
+      <LogicalName>btDebugBase-RightCap-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btDebugBase-RightCap-Pressed.png">
+      <LogicalName>btDebugBase-RightCap-Pressed.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btExecuteBase-Disabled.png">
+      <LogicalName>btExecuteBase-Disabled.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btExecuteBase-Hover.png">
+      <LogicalName>btExecuteBase-Hover.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btExecuteBase-Normal.png">
+      <LogicalName>btExecuteBase-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\btExecuteBase-Pressed.png">
+      <LogicalName>btExecuteBase-Pressed.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoExecute-Disabled.png">
+      <LogicalName>icoExecute-Disabled.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoExecute-Normal.png">
+      <LogicalName>icoExecute-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoStop-Disabled.png">
+      <LogicalName>icoStop-Disabled.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoStop-Normal.png">
+      <LogicalName>icoStop-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\notificationBuildingIcon.png">
+      <LogicalName>notificationBuildingIcon.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\notificationDisclosure-Active.png">
+      <LogicalName>notificationDisclosure-Active.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\notificationDisclosure-Normal.png">
+      <LogicalName>notificationDisclosure-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\notificationErrorIcon.png">
+      <LogicalName>notificationErrorIcon.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\disclose-arrow-down.png">
+      <LogicalName>disclose-arrow-down.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\disclose-arrow-up.png">
+      <LogicalName>disclose-arrow-up.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\magnify-16.png">
+      <LogicalName>magnify-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\searchbox-clear-16.png">
+      <LogicalName>searchbox-clear-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tree-popup-button.png">
+      <LogicalName>tree-popup-button.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components\SearchEntry.cs" />
+    <EmbeddedResource Include="icons\searchbox-search-16.png">
+      <LogicalName>searchbox-search-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\clear-all-bookmarks-16.png">
+      <LogicalName>clear-all-bookmarks-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\close-all-documents-16.png">
+      <LogicalName>close-all-documents-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\close-solution-16.png">
+      <LogicalName>close-solution-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\closed-folder-16.png">
+      <LogicalName>closed-folder-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\closed-resource-folder-16.png">
+      <LogicalName>closed-resource-folder-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\empty-16.png">
+      <LogicalName>empty-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\find-in-files-16.png">
+      <LogicalName>find-in-files-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\goto-next-bookmark-16.png">
+      <LogicalName>goto-next-bookmark-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\goto-next-bookmark-22.png">
+      <LogicalName>goto-next-bookmark-22.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\goto-prev-bookmark-22.png">
+      <LogicalName>goto-prev-bookmark-22.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\goto-prev-bookmark-16.png">
+      <LogicalName>goto-prev-bookmark-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\clear-all-bookmarks-22.png">
+      <LogicalName>clear-all-bookmarks-22.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\misc-files-16.png">
+      <LogicalName>misc-files-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\open-folder-16.png">
+      <LogicalName>open-folder-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\open-project-16.png">
+      <LogicalName>open-project-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\open-resource-folder-16.png">
+      <LogicalName>open-resource-folder-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\output-icon-16.png">
+      <LogicalName>output-icon-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\replace-in-files-16.png">
+      <LogicalName>replace-in-files-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\resource-file-16.png">
+      <LogicalName>resource-file-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\resource-file-32.png">
+      <LogicalName>resource-file-32.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\save-all-16.png">
+      <LogicalName>save-all-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\save-all-24.png">
+      <LogicalName>save-all-24.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\split-window-16.png">
+      <LogicalName>split-window-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\text-file-32.png">
+      <LogicalName>text-file-32.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\text-file-16.png">
+      <LogicalName>text-file-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tip-of-the-day-16.png">
+      <LogicalName>tip-of-the-day-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toggle-bookmark-16.png">
+      <LogicalName>toggle-bookmark-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\toggle-bookmark-22.png">
+      <LogicalName>toggle-bookmark-22.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\web-search-16.png">
+      <LogicalName>web-search-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\empty-file-32.png">
+      <LogicalName>empty-file-32.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tabbar-prev.png">
+      <LogicalName>tabbar-prev.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tabbar-next.png">
+      <LogicalName>tabbar-next.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\breadcrumb-prev-normal.png">
+      <LogicalName>breadcrumb-prev-normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\breadcrumb-next-normal.png">
+      <LogicalName>breadcrumb-next-normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tabbar-popdown.png">
+      <LogicalName>tabbar-popdown.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusBuild-05.png">
+      <LogicalName>statusBuild-05.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusBuild-04.png">
+      <LogicalName>statusBuild-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusBuild-03.png">
+      <LogicalName>statusBuild-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusBuild-02.png">
+      <LogicalName>statusBuild-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusBuild-01.png">
+      <LogicalName>statusBuild-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSearch-04.png">
+      <LogicalName>statusSearch-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSearch-03.png">
+      <LogicalName>statusSearch-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSearch-02.png">
+      <LogicalName>statusSearch-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSearch-01.png">
+      <LogicalName>statusSearch-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-06.png">
+      <LogicalName>statusPush-06.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-05.png">
+      <LogicalName>statusPush-05.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-04.png">
+      <LogicalName>statusPush-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-03.png">
+      <LogicalName>statusPush-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-02.png">
+      <LogicalName>statusPush-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPush-01.png">
+      <LogicalName>statusPush-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-06.png">
+      <LogicalName>statusPull-06.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-05.png">
+      <LogicalName>statusPull-05.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-04.png">
+      <LogicalName>statusPull-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-03.png">
+      <LogicalName>statusPull-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-02.png">
+      <LogicalName>statusPull-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusPull-01.png">
+      <LogicalName>statusPull-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-06.png">
+      <LogicalName>statusOpen-06.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-05.png">
+      <LogicalName>statusOpen-05.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-04.png">
+      <LogicalName>statusOpen-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-03.png">
+      <LogicalName>statusOpen-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-01.png">
+      <LogicalName>statusOpen-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusOpen-02.png">
+      <LogicalName>statusOpen-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\error-16.png">
+      <LogicalName>error-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\warning-16.png">
+      <LogicalName>warning-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tree-popup-button-down.png">
+      <LogicalName>tree-popup-button-down.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\command.png">
+      <LogicalName>command.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoBuild-Disabled.png">
+      <LogicalName>icoBuild-Disabled.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Components.MainToolbar\Theme\icoBuild-Normal.png">
+      <LogicalName>icoBuild-Normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\tree-popup-button-hover.png">
+      <LogicalName>tree-popup-button-hover.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\console-16.png">
+      <LogicalName>console-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\stop-16.png">
+      <LogicalName>stop-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\broom-16.png">
+      <LogicalName>broom-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSteady.png">
+      <LogicalName>statusSteady.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusSuccess.png">
+      <LogicalName>statusSuccess.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusWarning.png">
+      <LogicalName>statusWarning.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusError.png">
+      <LogicalName>statusError.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\link-chat.png">
+      <LogicalName>link-chat.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\link-cloud.png">
+      <LogicalName>link-cloud.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\link-heart.png">
+      <LogicalName>link-heart.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\link-info.png">
+      <LogicalName>link-info.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\star-normal-hover.png">
+      <LogicalName>star-normal-hover.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\star-normal.png">
+      <LogicalName>star-normal.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\star-pinned-hover.png">
+      <LogicalName>star-pinned-hover.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\star-pinned.png">
+      <LogicalName>star-pinned.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\new_solution.png">
+      <LogicalName>new_solution.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\open_solution.png">
+      <LogicalName>open_solution.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\locale_16x16.png">
+      <LogicalName>locale_16x16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\visibility-InternalAndProtected-16.png">
+      <LogicalName>visibility-InternalAndProtected-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\visibility-ProtectedOrInternal-16.png">
+      <LogicalName>visibility-ProtectedOrInternal-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\chain-overlay-16.png">
+      <LogicalName>chain-overlay-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\folder-overlay-16.png">
+      <LogicalName>folder-overlay-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\project-overlay-16.png">
+      <LogicalName>project-overlay-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\project-item-group-16.png">
+      <LogicalName>project-item-group-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\sdk-locations-16.png">
+      <LogicalName>sdk-locations-16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\errors-pad.png">
+      <LogicalName>errors-pad.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MonoDevelop.Ide.WelcomePage\icons\starburst.png">
+      <LogicalName>starburst.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-01.png">
+      <LogicalName>statusConnecting-01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-02.png">
+      <LogicalName>statusConnecting-02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-03.png">
+      <LogicalName>statusConnecting-03.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-04.png">
+      <LogicalName>statusConnecting-04.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-05.png">
+      <LogicalName>statusConnecting-05.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icons\statusConnecting-06.png">
+      <LogicalName>statusConnecting-06.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -940,7 +1214,6 @@
     <Compile Include="MonoDevelop.Ide.Templates\PartialTypeFileTemplateCondition.cs" />
     <Compile Include="MonoDevelop.Ide.Templates\ParentProjectFileTemplateCondition.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Content\CompletionTextEditorExtension.cs" />
-    <Compile Include="MonoDevelop.Ide.Gui\DragNotebook.cs" />
     <Compile Include="MonoDevelop.Ide.Gui\ToolbarComboBox.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Content\ISplittable.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Content\IFoldable.cs" />
@@ -1076,7 +1349,6 @@
     <Compile Include="MonoDevelop.Components\InvisibleFrame.cs" />
     <Compile Include="MonoDevelop.Components\ListView.cs" />
     <Compile Include="MonoDevelop.Components\TooltipWindow.cs" />
-    <Compile Include="MonoDevelop.Components\WindowTransparencyDecorator.cs" />
     <Compile Include="MonoDevelop.Components\ConsoleView.cs" />
     <Compile Include="MonoDevelop.Components\FolderListSelector.cs" />
     <Compile Include="MonoDevelop.Components\InfoBar.cs" />
@@ -1172,7 +1444,6 @@
     <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyEditorCell.cs" />
     <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyEditorTypeAttribute.cs" />
     <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyGrid.cs" />
-    <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyGridTree.cs" />
     <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyValueChangedEventArgs.cs" />
     <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyValueChangedEventHandler.cs" />
     <Compile Include="MonoDevelop.Components.PropertyGrid\SurrogateUITypeEditorAttribute.cs" />
@@ -1216,7 +1487,6 @@
     <Compile Include="MonoDevelop.Components.Docking\DockObject.cs" />
     <Compile Include="MonoDevelop.Components.Docking\DockPosition.cs" />
     <Compile Include="MonoDevelop.Components.Docking\PlaceholderWindow.cs" />
-    <Compile Include="MonoDevelop.Components.Docking\ShadedContainer.cs" />
     <Compile Include="MonoDevelop.Components.Docking\TabStrip.cs" />
     <Compile Include="MonoDevelop.Components\MenuButtonEntry.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Dialogs\IOptionsPanel.cs" />
@@ -1237,7 +1507,6 @@
     <Compile Include="MonoDevelop.Ide.WebBrowser\LocationChangingEventArgs.cs" />
     <Compile Include="MonoDevelop.Ide.WebBrowser\IWebBrowserLoader.cs" />
     <Compile Include="MonoDevelop.Ide.CodeCompletion\CompletionListWindow.cs" />
-    <Compile Include="MonoDevelop.Ide.CodeCompletion\DeclarationViewWindow.cs" />
     <Compile Include="MonoDevelop.Ide.CodeCompletion\ICompletionWidget.cs" />
     <Compile Include="MonoDevelop.Ide.CodeCompletion\ListWindow.cs" />
     <Compile Include="MonoDevelop.Ide.CodeCompletion\ParameterInformationWindowManager.cs" />
@@ -1251,7 +1520,6 @@
     <Compile Include="MonoDevelop.Ide.CodeCompletion\CodeCompletionContextEventArgs.cs" />
     <Compile Include="gtk-gui\MonoDevelop.Ide.Gui.Dialogs.MultiMessageDialog.cs" />
     <Compile Include="gtk-gui\MonoDevelop.Ide.Gui.Dialogs.MultiTaskProgressDialog.cs" />
-    <Compile Include="gtk-gui\MonoDevelop.Ide.Gui.Dialogs.OptionsDialog.cs" />
     <Compile Include="gtk-gui\MonoDevelop.Ide.Gui.Dialogs.ProgressDialog.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Components\CellRendererPixbuf.cs" />
     <Compile Include="MonoDevelop.Ide\DesktopService.cs" />
@@ -1373,11 +1641,6 @@
     <Compile Include="gtk-gui\MonoDevelop.Ide.Gui.Components.StringTagSelectorButton.cs" />
     <Compile Include="MonoDevelop.Ide.Gui.Pads.ProjectPad\SolutionFolderFileNodeBuilder.cs" />
     <Compile Include="MonoDevelop.Components\CompactScrolledWindow.cs" />
-    <Compile Include="MonoDevelop.Ide.NavigateToDialog\NavigateToDialog.cs" />
-    <Compile Include="gtk-gui\MonoDevelop.Ide.NavigateToDialog.NavigateToDialog.cs" />
-    <Compile Include="MonoDevelop.Ide.NavigateToDialog\NavigateToCommand.cs" />
-    <Compile Include="MonoDevelop.Ide.NavigateToDialog\SearchResult.cs" />
-    <Compile Include="MonoDevelop.Ide.NavigateToDialog\ResultsDataSource.cs" />
     <Compile Include="MonoDevelop.Ide.CodeCompletion\MemberCompletionData.cs" />
     <Compile Include="MonoDevelop.Ide.Navigation\DocumentNavigationPoint.cs" />
     <Compile Include="MonoDevelop.Ide.Navigation\NavigationHistoryService.cs" />
@@ -1468,10 +1731,8 @@
     <Compile Include="MonoDevelop.Ide.Projects\PackageReferencePanel.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageCommands.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageOptionPanel.cs" />
-    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageView.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageWidget.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageOptions.cs" />
-    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageBranding.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageLinkButton.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageNewsFeed.cs" />
     <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageRecentProjectsList.cs" />
@@ -1508,14 +1769,90 @@
     <Compile Include="MonoDevelop.Ide.TypeSystem\CodeGenerationService.cs" />
     <Compile Include="MonoDevelop.Ide.TypeSystem\CodeGenerator.cs" />
     <Compile Include="MonoDevelop.Ide.TypeSystem\TypeSystemParserNode.cs" />
-    <Compile Include="MonoDevelop.Ide.TypeSystem\ITypeSystemParser.cs" />
     <Compile Include="MonoDevelop.Ide.TypeSystem\MonoDocDocumentationProvider.cs" />
     <Compile Include="MonoDevelop.Ide.Projects.OptionPanels\PortableRuntimeOptionsPanel.cs" />
     <Compile Include="gtk-gui\MonoDevelop.Ide.Projects.OptionPanels.PortableRuntimeOptionsPanelWidget.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\DockNotebook.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\Styles.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\DocumentToolbar.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\MainToolbar.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\StatusArea.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\RoundButton.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\ButtonBar.cs" />
     <Compile Include="MonoDevelop.Ide.TypeSystem\ProjectCommentTags.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\ProjectSearchCategory.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\SearchCategory.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\ISearchDataSource.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\FileSearchCategory.cs" />
+    <Compile Include="MonoDevelop.Components.PropertyGrid\PropertyGridTable.cs" />
+    <Compile Include="MonoDevelop.Components\CompactDialog.cs" />
+    <Compile Include="MonoDevelop.Components.Docking\DockVisualStyle.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\StyledProgressBar.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\SearchPopupWindow.cs" />
+    <Compile Include="MonoDevelop.Components\SquaredNotebook.cs" />
+    <Compile Include="MonoDevelop.Components\PopoverWindow.cs" />
     <Compile Include="MonoDevelop.Components\ProgressControl.cs" />
+    <Compile Include="MonoDevelop.Components\TooltipPopoverWindow.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui.Components\AnimatedIcon.cs" />
     <Compile Include="MonoDevelop.Ide\DefaultWebCertificateProvider.cs" />
     <Compile Include="MonoDevelop.Ide.TypeSystem\ParsedFileEventArgs.cs" />
+    <Compile Include="MonoDevelop.Ide.Extensions\MimeTypeExtensionNode.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\DocumentView.cs" />
+    <Compile Include="MonoDevelop.Components\VPanedThin.cs" />
+    <Compile Include="MonoDevelop.Components\HPanedThin.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\CommandSearchCategory.cs" />
+    <Compile Include="MonoDevelop.Components\ExtendedLabel.cs" />
+    <Compile Include="MonoDevelop.Ide.CodeCompletion\TooltipInformation.cs" />
+    <Compile Include="MonoDevelop.Ide.CodeCompletion\TooltipInformationWindow.cs" />
+    <Compile Include="MonoDevelop.Ide.CodeCompletion\ParameterDataProvider.cs" />
+    <Compile Include="MonoDevelop.Ide.TypeSystem\TypeSystemParser.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageSection.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\Style.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageFeedItem.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageListButton.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageButtonBar.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageBarButton.cs" />
+    <Compile Include="MonoDevelop.Components\Tweener.cs" />
+    <Compile Include="MonoDevelop.Components\MouseTracker.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\SearchPopupSearchPattern.cs" />
+    <Compile Include="MonoDevelop.Components\PopoverWindowTheme.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageYoutubeFeed.cs" />
+    <Compile Include="MonoDevelop.Ide\EditReferencesEventArgs.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\StatusAreaTheme.cs" />
+    <Compile Include="MonoDevelop.Components\PopoverWidget.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\TextEditorService.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\FileLineExtension.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\TopLevelWidgetExtension.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\VerticalAlignment.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\HorizontalAlignment.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\TextLineMarkerExtension.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\TextFileEventArgs.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\LineCountEventArgs.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\FileExtension.cs" />
+    <Compile Include="MonoDevelop.Ide.TextEditing\FileExtensionEventArgs.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\StatusAreaBuildTheme.cs" />
+    <Compile Include="MonoDevelop.Components\ThreadedRenderer.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\ConfigurationMerger.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\NavigateToCommand.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\ResultsDataSource.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\SearchResult.cs" />
+    <Compile Include="MonoDevelop.Components\ImageButton.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\DefaultWelcomePage.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageService.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageFrame.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageRow.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageColumn.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\IWelcomePageProvider.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageTipOfTheDaySection.cs" />
+    <Compile Include="MonoDevelop.Components.Docking\DockItemTitleTab.cs" />
+    <Compile Include="MonoDevelop.Ide.WelcomePage\WelcomePageFirstRun.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\StatusBar.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\StatusBarContextBase.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\StatusBarContext.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\StatusBarIcon.cs" />
+    <Compile Include="MonoDevelop.Ide.Gui\StatusBarContextImpl.cs" />
+    <Compile Include="MonoDevelop.Components.MainToolbar\MainStatusBarContextImpl.cs" />
+    <Compile Include="MonoDevelop.Ide.TypeSystem\MonoDevelopProjectContent.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.am" />
@@ -1540,10 +1877,49 @@
     <None Include="MonoDevelop.Ide.dll.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="icons\element-enumeration-constant-16.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">
     <Copy SourceFiles="@(Data)" DestinationFolder="..\..\..\build\data\%(Data.RelativeDir)" />
   </Target>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="MonoDevelop.Ide.CodeFormatting\" />
+    <Folder Include="MonoDevelop.Ide.Execution\" />
+    <Folder Include="MonoDevelop.Ide.Extensions\" />
+    <Folder Include="MonoDevelop.Ide.CustomTools\" />
+    <Folder Include="MonoDevelop.Components.Extensions\" />
+    <Folder Include="MonoDevelop.Components.Theming\" />
+    <Folder Include="MonoDevelop.Components.Docking\" />
+    <Folder Include="MonoDevelop.Ide.Gui\" />
+    <Folder Include="MonoDevelop.Ide.Desktop\" />
+    <Folder Include="MonoDevelop.Ide.Projects\" />
+    <Folder Include="MonoDevelop.Ide\" />
+    <Folder Include="MonoDevelop.Ide.Gui.Dialogs\" />
+    <Folder Include="MonoDevelop.Ide.Projects.OptionPanels\" />
+    <Folder Include="MonoDevelop.Ide.NavigateToDialog\" />
+    <Folder Include="MonoDevelop.Ide.Navigation\" />
+    <Folder Include="MonoDevelop.Components.AutoTest\" />
+    <Folder Include="MonoDevelop.Ide.Fonts\" />
+    <Folder Include="MonoDevelop.Ide.Codons\" />
+    <Folder Include="ExtensionModel\" />
+    <Folder Include="icons\" />
+    <Folder Include="MonoDevelop.Ide.WelcomePage\" />
+    <Folder Include="branding\" />
+    <Folder Include="MonoDevelop.Components.MainToolbar\" />
+    <Folder Include="MonoDevelop.Components.MainToolbar\Theme\" />
+    <Folder Include="MonoDevelop.Ide.WelcomePage\icons\" />
+    <Folder Include="MonoDevelop.Ide.TextEditing\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="gtkrc.win32">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="gtkrc.mac">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="gtkrc">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

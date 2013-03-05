@@ -40,7 +40,7 @@ using System.Linq;
 
 namespace MonoDevelop.Ide.Gui.OptionPanels
 {
-	internal class IDEStyleOptionsPanel : OptionsPanel
+	class IDEStyleOptionsPanel : OptionsPanel
 	{
 		IDEStyleOptionsPanelWidget widget;
 
@@ -57,8 +57,30 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 	
 	public partial class IDEStyleOptionsPanelWidget : Gtk.Bin
 	{
-		readonly Gtk.IconSize[] sizes = new Gtk.IconSize [] { Gtk.IconSize.Menu, Gtk.IconSize.SmallToolbar, Gtk.IconSize.LargeToolbar };
-				
+		static Lazy<List<string>> themes = new Lazy<List<string>> (() => {
+			var searchDirs = new List<string> ();
+
+			string prefix = Environment.GetEnvironmentVariable ("MONO_INSTALL_PREFIX");
+			FilePath homeDir = Environment.GetFolderPath (Environment.SpecialFolder.Personal);
+
+			searchDirs.Add (homeDir.Combine (".themes"));
+			searchDirs.Add (Gtk.Rc.ThemeDir);
+			if (!string.IsNullOrEmpty (prefix))
+				searchDirs.Add (new FilePath (prefix).Combine ("share").Combine ("themes"));
+			
+
+			var themes = FindThemes (searchDirs).ToList ();
+			themes.Sort ();
+			return themes;
+		});
+
+		public static IList<string> InstalledThemes {
+			get {
+				return themes.Value;
+			}
+		}
+		
+
 		public IDEStyleOptionsPanelWidget ()
 		{
 			this.Build();
@@ -67,8 +89,6 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 		
 		void Load ()
 		{
-			string name = fontOutputButton.Style.FontDescription.ToString ();
-			
 			for (int n=1; n < isoCodes.Length; n += 2)
 				comboLanguage.AppendText (GettextCatalog.GetString (isoCodes [n]));
 			
@@ -78,35 +98,16 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 			
 			comboTheme.AppendText (GettextCatalog.GetString ("(Default)"));
 
-			FilePath homeDir = Environment.GetFolderPath (Environment.SpecialFolder.Personal);
-			string[] searchDirs = { homeDir.Combine (".themes"), Gtk.Rc.ThemeDir };
-			var themes = FindThemes (searchDirs).ToList ();
-			themes.Sort ();
-			
-			foreach (string t in themes)
+			foreach (string t in InstalledThemes)
 				comboTheme.AppendText (t);
 			
-			comboTheme.Active = themes.IndexOf (IdeApp.Preferences.UserInterfaceTheme) + 1;
-			
-			documentSwitcherButton.Active = PropertyService.Get ("MonoDevelop.Core.Gui.EnableDocumentSwitchDialog", true);
-			fontCheckbox.Active = IdeApp.Preferences.CustomPadFont != null;
-			fontButton.FontName = IdeApp.Preferences.CustomPadFont ?? name;
-			fontButton.Sensitive = fontCheckbox.Active;
-			fontOutputCheckbox.Active = IdeApp.Preferences.CustomOutputPadFont != null;
-			fontOutputButton.FontName = IdeApp.Preferences.CustomOutputPadFont ?? name;
-			fontOutputButton.Sensitive = fontOutputCheckbox.Active;
-			
-			fontCheckbox.Toggled += new EventHandler (FontCheckboxToggled);
-			fontOutputCheckbox.Toggled += new EventHandler (FontOutputCheckboxToggled);
+			comboTheme.Active = themes.Value.IndexOf (IdeApp.Preferences.UserInterfaceTheme) + 1;
 
-			Gtk.IconSize curSize = IdeApp.Preferences.ToolbarSize;
-			toolbarCombobox.Active = Array.IndexOf (sizes, curSize);
-			
-			comboCompact.Active = (int) IdeApp.Preferences.WorkbenchCompactness;
+			labelTheme.Visible = comboTheme.Visible = !Platform.IsMac && !Platform.IsWindows;
 		}
 		
 		// Code for getting the list of themes based on f-spot
-		ICollection<string> FindThemes (params string[] themeDirs)
+		static ICollection<string> FindThemes (IEnumerable<string> themeDirs)
 		{
 			var themes = new HashSet<string> ();
 			string gtkrc = System.IO.Path.Combine ("gtk-2.0", "gtkrc");
@@ -114,20 +115,13 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 				if (string.IsNullOrEmpty (themeDir) || !System.IO.Directory.Exists (themeDir))
 					continue;
 				foreach (FilePath dir in System.IO.Directory.GetDirectories (themeDir)) {
-					if (System.IO.File.Exists (dir.Combine (gtkrc)))
-						themes.Add (dir.FileName);
+					if (System.IO.File.Exists (dir.Combine (gtkrc))) {
+						if (!IdeStartup.FailingGtkThemes.Any (t => t == dir.FileName))
+							themes.Add (dir.FileName);
+					}
 				}
 			}
 			return themes;
-		}
-		
-		void FontOutputCheckboxToggled (object sender, EventArgs e)
-		{
-			fontOutputButton.Sensitive = fontOutputCheckbox.Active;
-		}
-		void FontCheckboxToggled (object sender, EventArgs e)
-		{
-			fontButton.Sensitive = fontCheckbox.Active;
 		}
 		
 		public void Store()
@@ -135,7 +129,12 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 			string lc = isoCodes [comboLanguage.Active * 2];
 			if (lc != IdeApp.Preferences.UserInterfaceLanguage) {
 				IdeApp.Preferences.UserInterfaceLanguage = lc;
-				MessageService.ShowMessage (GettextCatalog.GetString ("The user interface language change will take effect the next time you start MonoDevelop"));
+				MessageService.ShowMessage (
+					GettextCatalog.GetString (
+						"The user interface language change will take effect the next time you start {0}",
+						BrandingService.ApplicationName
+					)
+				);
 			}
 			string theme;
 			if (comboTheme.Active == 0) {
@@ -149,22 +148,6 @@ namespace MonoDevelop.Ide.Gui.OptionPanels
 			
 			if (theme != Gtk.Settings.Default.ThemeName)
 				Gtk.Settings.Default.ThemeName = theme;
-			
-			if (fontCheckbox.Active)
-				IdeApp.Preferences.CustomPadFont = fontButton.FontName;
-			else
-				IdeApp.Preferences.CustomPadFont = null;
-			
-			if (fontOutputCheckbox.Active)
-				IdeApp.Preferences.CustomOutputPadFont = fontOutputButton.FontName;
-			else
-				IdeApp.Preferences.CustomOutputPadFont = null;
-			
-			IdeApp.Preferences.ToolbarSize = sizes [toolbarCombobox.Active];
-			
-			IdeApp.Preferences.WorkbenchCompactness = (WorkbenchCompactness) comboCompact.Active;
-
-			PropertyService.Set ("MonoDevelop.Core.Gui.EnableDocumentSwitchDialog", documentSwitcherButton.Active);
 		}
 		
 		static string[] isoCodes = new string[] {

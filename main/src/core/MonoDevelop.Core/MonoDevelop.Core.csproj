@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,7 +9,36 @@
     <OutputType>Library</OutputType>
     <AssemblyName>MonoDevelop.Core</AssemblyName>
     <RootNamespace>MonoDevelop.Core</RootNamespace>
+    <BuildInfo>..\..\..\build\bin\buildinfo</BuildInfo>
+    <VcRevision>..\..\..\vcrevision</VcRevision>
   </PropertyGroup>
+  <Choose>
+    <When Condition=" Exists('c:\Program Files\Git\bin\git.exe') ">
+      <PropertyGroup>
+        <Git>c:\Program Files\Git\bin\git.exe</Git>
+      </PropertyGroup>
+    </When>
+    <When Condition=" Exists('c:\Program Files (x86)\Git\bin\git.exe') ">
+      <PropertyGroup>
+        <Git>c:\Program Files (x86)\Git\bin\git.exe</Git>
+      </PropertyGroup>
+    </When>
+    <When Condition=" Exists('c:\msysgit\bin\git.exe') ">
+      <PropertyGroup>
+        <Git>c:\msysgit\bin\git.exe</Git>
+      </PropertyGroup>
+    </When>
+    <When Condition=" Exists('/usr/bin/git') ">
+      <PropertyGroup>
+        <Git>/usr/bin/git</Git>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <Git>git</Git>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>True</DebugSymbols>
     <DebugType>full</DebugType>
@@ -43,12 +72,6 @@
     <Reference Include="ICSharpCode.SharpZipLib" />
     <Reference Include="monodoc, Version=1.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
       <Private>False</Private>
-    </Reference>
-    <Reference Include="Mono.Addins, Version=0.5.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="Mono.Addins.Setup, Version=0.5.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Web" />
@@ -348,7 +371,6 @@
     <Compile Include="MonoDevelop.Projects.Text\TextFile.cs" />
     <Compile Include="MonoDevelop.Projects.Text\TextEncoding.cs" />
     <Compile Include="MonoDevelop.Projects.Text\TextFileReader.cs" />
-    <Compile Include="MonoDevelop.Projects.Text\TextFileService.cs" />
     <Compile Include="MonoDevelop.Projects.Text\TextFormatter.cs" />
     <Compile Include="MonoDevelop.Projects.Utility\DiffUtility.cs" />
     <Compile Include="MonoDevelop.Core.StringParsing\IStringTagProvider.cs" />
@@ -382,7 +404,6 @@
     <Compile Include="MonoDevelop.Core\ApplicationService.cs" />
     <Compile Include="MonoDevelop.Core.ProgressMonitoring\ProgressStatusMonitor.cs" />
     <Compile Include="MonoDevelop.Projects\LanguageBindingService.cs" />
-    <Compile Include="MonoDevelop.Core.AddIns\MimeTypeExtensionNode.cs" />
     <Compile Include="MonoDevelop.Projects\ILanguageBinding.cs" />
     <Compile Include="MonoDevelop.Core\Platform.cs" />
     <Compile Include="MonoDevelop.Core\UserProfile.cs" />
@@ -408,13 +429,14 @@
     <Compile Include="MonoDevelop.Projects.Utility\ByteOrderMark.cs" />
     <Compile Include="MonoDevelop.Core.Instrumentation\IInstrumentationConsumer.cs" />
     <Compile Include="MonoDevelop.Projects\PortableDotNetProject.cs" />
-    <Compile Include="MonoDevelop.Core.Assemblies\Framework.cs" />
     <Compile Include="MonoDevelop.Core.AddIns\FilePathExtensionNode.cs" />
     <Compile Include="MonoDevelop.Projects.Formats.MSBuild\TargetsAvailableCondition.cs" />
     <Compile Include="MonoDevelop.Projects\PortableDotNetProjectBinding.cs" />
     <Compile Include="MonoDevelop.Core.AddIns\AssemblyInstalledCondition.cs" />
     <Compile Include="MonoDevelop.Core\WebCertificateService.cs" />
     <Compile Include="MonoDevelop.Core\IWebCertificateProvider.cs" />
+    <Compile Include="MonoDevelop.Core.Execution\ExecutionTarget.cs" />
+    <Compile Include="MonoDevelop.Core.Assemblies\SupportedFramework.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.am" />
@@ -443,21 +465,33 @@
     <EmbeddedResource Include="md1format.xml">
       <LogicalName>md1format.xml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="frameworks\framework_NET_4_5.xml">
+      <LogicalName>framework_NET_4_5.xml</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Target Name="BeforeBuild">
+    <MakeDir Directories="$(OutputPath)" />
+    <Exec Command="&quot;$(Git)&quot; rev-parse HEAD &gt; $(BuildInfo)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="True" />
+    <Exec Command="&quot;$(Git)&quot; rev-parse HEAD &gt; $(VcRevision)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="True" />
+  </Target>
   <ItemGroup>
     <ProjectReference Include="..\MonoDevelop.Projects.Formats.MSBuild\MonoDevelop.Projects.Formats.MSBuild.csproj">
       <Project>{A437F1A3-78DF-4F00-8053-D32A8B1EB679}</Project>
       <Name>MonoDevelop.Projects.Formats.MSBuild</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\external\Mono.Cecil\Mono.Cecil.csproj">
+    <ProjectReference Include="..\..\..\external\cecil\Mono.Cecil.csproj">
       <Project>{D68133BD-1E63-496E-9EDE-4FBDBF77B486}</Project>
       <Name>Mono.Cecil</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\external\Mono.Cecil\symbols\mdb\Mono.Cecil.Mdb.csproj">
+    <ProjectReference Include="..\..\..\external\cecil\symbols\mdb\Mono.Cecil.Mdb.csproj">
       <Project>{8559DD7F-A16F-46D0-A05A-9139FAEBA8FD}</Project>
       <Name>Mono.Cecil.Mdb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\Newtonsoft.Json\Src\Newtonsoft.Json\Newtonsoft.Json.csproj">
+      <Project>{A9AE40FF-1A21-414A-9FE7-3BE13644CC6D}</Project>
+      <Name>Newtonsoft.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory\ICSharpCode.NRefactory.csproj">
       <Project>{3B2A5653-EC97-4001-BB9B-D90F1AF2C371}</Project>
@@ -466,6 +500,26 @@
     <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory.CSharp\ICSharpCode.NRefactory.CSharp.csproj">
       <Project>{53DCA265-3C3C-42F9-B647-F72BA678122B}</Project>
       <Name>ICSharpCode.NRefactory.CSharp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins\Mono.Addins.csproj">
+      <Project>{91DD5A2D-9FE3-4C3C-9253-876141874DAD}</Project>
+      <Name>Mono.Addins</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins.Setup\Mono.Addins.Setup.csproj">
+      <Project>{A85C9721-C054-4BD8-A1F3-0227615F0A36}</Project>
+      <Name>Mono.Addins.Setup</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins.Gui\Mono.Addins.Gui.csproj">
+      <Project>{FEC19BDA-4904-4005-8C09-68E82E8BEF6A}</Project>
+      <Name>Mono.Addins.Gui</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\ikvm\reflect\IKVM.Reflection.csproj">
+      <Project>{4CB170EF-DFE6-4A56-9E1B-A85449E827A7}</Project>
+      <Name>IKVM.Reflection</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\external\cecil\symbols\pdb\Mono.Cecil.Pdb.csproj">
+      <Project>{63E6915C-7EA4-4D76-AB28-0D7191EEA626}</Project>
+      <Name>Mono.Cecil.Pdb</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

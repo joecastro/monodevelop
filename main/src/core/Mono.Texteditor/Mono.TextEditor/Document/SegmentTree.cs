@@ -62,21 +62,21 @@ namespace Mono.TextEditor
 			}
 		}
 		
-		bool isInstalled = false;
+		TextDocument ownerDocument;
 		public void InstallListener (TextDocument doc)
 		{
-			if (isInstalled)
+			if (ownerDocument != null)
 				throw new InvalidOperationException ("Segment tree already installed");
-			isInstalled = true;
+			ownerDocument = doc;
 			doc.TextReplaced += UpdateOnTextReplace;
 		}
 
-		public void RemoveListener (TextDocument doc)
+		public void RemoveListener ()
 		{
-			if (!isInstalled)
+			if (ownerDocument == null)
 				throw new InvalidOperationException ("Segment tree is not installed");
-			isInstalled = false;
-			doc.TextReplaced -= UpdateOnTextReplace;
+			ownerDocument.TextReplaced -= UpdateOnTextReplace;
+			ownerDocument = null;
 		}
 		
 		public void Clear ()
@@ -183,6 +183,8 @@ namespace Mono.TextEditor
 			var result = SearchNode (ref startOffset);
 			while (startOffset == 0) {
 				var pre = result == null ? tree.Root.GetOuterRight () : result.GetPrevNode ();
+				if (pre == null)
+					return null;
 				startOffset += pre.DistanceToPrevNode;
 				result = pre;
 			}
@@ -253,16 +255,17 @@ namespace Mono.TextEditor
 				var node = interval.node;
 				int nodeStart = interval.start - node.DistanceToPrevNode;
 				int nodeEnd = interval.end - node.DistanceToPrevNode;
-				if (node.left != null) {
-					nodeStart -= node.left.TotalLength;
-					nodeEnd -= node.left.TotalLength;
+				var leftNode = node.left;
+				if (leftNode != null) {
+					nodeStart -= leftNode.TotalLength;
+					nodeEnd -= leftNode.TotalLength;
 				}
 			
 				if (node.DistanceToMaxEnd < nodeStart) 
 					continue;
 			
-				if (node.left != null)
-					intervalStack.Push (new Interval (node.left, interval.start, interval.end));
+				if (leftNode != null)
+					intervalStack.Push (new Interval (leftNode, interval.start, interval.end));
 				
 				if (nodeEnd < 0) 
 					continue;
@@ -270,8 +273,9 @@ namespace Mono.TextEditor
 				if (nodeStart <= node.Length)
 					yield return (T)node;
 			
-				if (node.right != null) 
-					intervalStack.Push (new Interval (node.right, nodeStart, nodeEnd));
+				var rightNode = node.right;
+				if (rightNode != null) 
+					intervalStack.Push (new Interval (rightNode, nodeStart, nodeEnd));
 			}
 		}
 	}

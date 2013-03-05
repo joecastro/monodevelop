@@ -56,12 +56,16 @@ namespace MonoDevelop.AnalysisCore.Gui
 		
 		public override void Dispose ()
 		{
-			if (!disposed) {
-				AnalysisOptions.AnalysisEnabled.Changed -= AnalysisOptionsChanged;
-				CancelTask ();
-				disposed = true;
-			}
-			base.Dispose ();
+			if (disposed) 
+				return;
+			enabled = false;
+			Document.DocumentParsed -= OnDocumentParsed;
+			CancelTask ();
+			AnalysisOptions.AnalysisEnabled.Changed -= AnalysisOptionsChanged;
+			while (markers.Count > 0)
+				Document.Editor.Document.RemoveMarker (markers.Dequeue ());
+			tasks.Clear ();
+			disposed = true;
 		}
 		
 		bool enabled;
@@ -92,7 +96,12 @@ namespace MonoDevelop.AnalysisCore.Gui
 		{
 			if (src != null) {
 				src.Cancel ();
-				oldTask.Wait ();
+				try {
+					oldTask.Wait ();
+				} catch (TaskCanceledException) {
+				} catch (AggregateException ex) {
+					ex.Handle (e => e is TaskCanceledException);
+				}
 			}
 		}
 		
@@ -116,18 +125,13 @@ namespace MonoDevelop.AnalysisCore.Gui
 			var doc = Document.ParsedDocument;
 			if (doc == null)
 				return;
-			if (src != null) {
-				src.Cancel ();
-				try {
-					oldTask.Wait ();
-				} catch (AggregateException ex) {
-					ex.Handle (e => e is TaskCanceledException);
-				}
+			lock (this) {
+				CancelTask ();
+				src = new CancellationTokenSource ();
+				var treeType = new RuleTreeType ("Document", Path.GetExtension (doc.FileName));
+				var task = AnalysisService.QueueAnalysis (Document, treeType, src.Token);
+				oldTask = task.ContinueWith (t => new ResultsUpdater (this, t.Result, src.Token).Update (), src.Token);
 			}
-			src = new CancellationTokenSource ();
-			var treeType = new RuleTreeType ("Document", Path.GetExtension (doc.FileName));
-			var task = AnalysisService.QueueAnalysis (Document, treeType, src.Token);
-			oldTask = task.ContinueWith (t => new ResultsUpdater (this, t.Result, src.Token).Update (), src.Token);
 		}
 		
 		class ResultsUpdater 
@@ -153,7 +157,7 @@ namespace MonoDevelop.AnalysisCore.Gui
 			
 			public void Update ()
 			{
-				if (!QuickTaskStrip.EnableFancyFeatures)
+				if (!QuickTaskStrip.EnableFancyFeatures || cancellationToken.IsCancellationRequested)
 					return;
 				ext.tasks.Clear ();
 				GLib.Idle.Add (IdleHandler);
@@ -186,10 +190,22 @@ namespace MonoDevelop.AnalysisCore.Gui
 					var currentResult = (Result)enumerator.Current;
 					
 					if (currentResult.InspectionMark != IssueMarker.None) {
-						var marker = new ResultMarker (currentResult);
-						marker.IsVisible = currentResult.Underline;
-						editor.Document.AddMarker (marker.Line, marker);
-						ext.markers.Enqueue (marker);
+						int start = editor.LocationToOffset (currentResult.Region.Begin);
+						int end = editor.LocationToOffset (currentResult.Region.End);
+
+						if (currentResult.InspectionMark == IssueMarker.GrayOut) {
+							var marker = new GrayOutMarker (currentResult, TextSegment.FromBounds (start, end));
+							marker.IsVisible = currentResult.Underline;
+							editor.Document.AddMarker (marker);
+							ext.markers.Enqueue (marker);
+							editor.Parent.TextViewMargin.RemoveCachedLine (editor.GetLineByOffset (start));
+							editor.Parent.QueueDraw ();
+						} else {
+							var marker = new ResultMarker (currentResult, TextSegment.FromBounds (start, end));
+							marker.IsVisible = currentResult.Underline;
+							editor.Document.AddMarker (marker);
+							ext.markers.Enqueue (marker);
+						}
 					}
 					
 					ext.tasks.Add (new QuickTask (currentResult.Message, currentResult.Region.Begin, currentResult.Level));
@@ -206,20 +222,16 @@ namespace MonoDevelop.AnalysisCore.Gui
 		
 		public IList<Result> GetResultsAtOffset (int offset, CancellationToken token = default (CancellationToken))
 		{
-			var location = Editor.Document.OffsetToLocation (offset);
-			var line = Editor.GetLineByOffset (offset);
+//			var location = Editor.Document.OffsetToLocation (offset);
+//			var line = Editor.GetLineByOffset (offset);
 			
 			var list = new List<Result> ();
-			foreach (var marker in line.Markers) {
+			foreach (var marker in Editor.Document.GetTextSegmentMarkersAt (offset)) {
 				if (token.IsCancellationRequested)
 					break;
 				var resultMarker = marker as ResultMarker;
-				if (resultMarker == null || resultMarker.Line != location.Line)
-					continue;
-				int cs = resultMarker.ColStart, ce = resultMarker.ColEnd;
-				if ((cs >= 0 && cs > location.Column) || (ce >= 0 && ce < location.Column))
-					continue;
-				list.Add (resultMarker.Result);
+				if (resultMarker != null)
+					list.Add (resultMarker.Result);
 			}
 			return list;
 		}

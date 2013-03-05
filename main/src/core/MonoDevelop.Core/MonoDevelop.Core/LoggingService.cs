@@ -80,7 +80,7 @@ namespace MonoDevelop.Core
 		}
 
 		static string GenericLogFile {
-			get { return "MonoDevelop.log"; }
+			get { return "Ide.log"; }
 		}
 		
 		public static DateTime LogTimestamp {
@@ -89,7 +89,7 @@ namespace MonoDevelop.Core
 
 		static string UniqueLogFile {
 			get {
-				return string.Format ("MonoDevelop.{0}.log", timestamp.ToString ("yyyy-MM-dd__HH-mm-ss"));
+				return string.Format ("Ide.{0}.log", timestamp.ToString ("yyyy-MM-dd__HH-mm-ss"));
 			}
 		}
 		
@@ -113,7 +113,9 @@ namespace MonoDevelop.Core
 			if (!Directory.Exists (UserProfile.Current.LogDir))
 				return;
 
-			var files = Directory.EnumerateFiles (UserProfile.Current.LogDir)
+			// HACK: we were using EnumerateFiles but it's broken in some Mono releases
+			// https://bugzilla.xamarin.com/show_bug.cgi?id=2975
+			var files = Directory.GetFiles (UserProfile.Current.LogDir)
 				.Select (f => new FileInfo (f))
 				.Where (f => f.CreationTimeUtc < DateTime.UtcNow.Subtract (TimeSpan.FromDays (7)));
 
@@ -323,29 +325,29 @@ namespace MonoDevelop.Core
 		
 		public static void LogDebug (string message, Exception ex)
 		{
-			Log (LogLevel.Debug, message + System.Environment.NewLine + (ex != null? ex.ToString () : string.Empty));
+			Log (LogLevel.Debug, message + (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty));
 		}
 		
 		public static void LogInfo (string message, Exception ex)
 		{
-			Log (LogLevel.Info, message + System.Environment.NewLine + (ex != null? ex.ToString () : string.Empty));
+			Log (LogLevel.Info, message + (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty));
 		}
 		
 		public static void LogWarning (string message, Exception ex)
 		{
-			Log (LogLevel.Warn, message + System.Environment.NewLine + (ex != null? ex.ToString () : string.Empty));
+			Log (LogLevel.Warn, message + (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty));
 		}
 		
 		public static void LogError (string message, Exception ex)
 		{
-			Log (LogLevel.Error, message + System.Environment.NewLine + (ex != null? ex.ToString () : string.Empty));
+			Log (LogLevel.Error, message + (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty));
 		}
 		
 		public static void LogFatalError (string message, Exception ex)
 		{
-			Log (LogLevel.Fatal, message + System.Environment.NewLine + (ex != null? ex.ToString () : string.Empty));
+			Log (LogLevel.Fatal, message + (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty));
 		}
-		
+
 #endregion
 	}
 }

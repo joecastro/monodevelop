@@ -27,13 +27,13 @@
 
 using System;
 using System.IO;
-using System.Reflection;
 using System.Collections.Generic;
 
 using Mono.Addins;
 using Mono.PkgConfig;
 using MonoDevelop.Core.AddIns;
 using MonoDevelop.Core.Serialization;
+using System.Reflection;
 
 namespace MonoDevelop.Core.Assemblies
 {
@@ -54,7 +54,7 @@ namespace MonoDevelop.Core.Assemblies
 		ClrVersion clrVersion;
 
 		List<TargetFrameworkMoniker> includedFrameworks = new List<TargetFrameworkMoniker> ();
-		List<Framework> supportedFrameworks = new List<Framework> ();
+		List<SupportedFramework> supportedFrameworks = new List<SupportedFramework> ();
 
 		internal bool RelationsBuilt;
 		
@@ -143,46 +143,72 @@ namespace MonoDevelop.Core.Assemblies
 			return TargetFrameworkToolsVersion.V4_0;
 		}
 
-		bool HackyCheckForPLPCompatibility (TargetFrameworkMoniker fxId)
+		static bool ProfileMatchesPattern (string profile, string pattern)
 		{
-			int profile, this_profile;
+			if (string.IsNullOrEmpty (pattern))
+				return string.IsNullOrEmpty (profile);
 
-			if (fxId.Profile == null || fxId.Profile.Length < 8 || !int.TryParse (fxId.Profile.Substring (7), out profile))
-				return false;
+			int star = pattern.IndexOf ('*');
 
-			switch (this.id.Identifier) {
-			case TargetFrameworkMoniker.ID_NET_FRAMEWORK:
-				if (new Version (fxId.Version).CompareTo (new Version (this.id.Version)) > 0)
+			if (star != -1) {
+				if (star == 0)
+					return true;
+
+				if (string.IsNullOrEmpty (profile))
 					return false;
 
-				return profile >= 1 && profile <= 3; // Profile4 does not support .NETFramework
-			case TargetFrameworkMoniker.ID_MONOTOUCH:
-			case TargetFrameworkMoniker.ID_MONODROID:
-				return profile >= 1 && profile <= 3;
-			case TargetFrameworkMoniker.ID_PORTABLE:
-				if (this.id.Profile == null || this.id.Profile.Length < 8 || !int.TryParse (this.id.Profile.Substring (7), out this_profile))
-					return false;
-
-				switch (this_profile) {
-				case 1: return true;
-				case 2: return profile == 2;
-				case 3: return profile == 3;
-				case 4: return profile == 4;
-				default: return false;
-				}
-			default:
-				return false;
+				var prefix = pattern.Substring (0, star);
+				return profile.StartsWith (prefix);
 			}
+
+			return profile == pattern;
 		}
-		
+
+		[Obsolete ("Use CanReferenceAssembliesTargetingFramework() instead")]
 		public bool IsCompatibleWithFramework (TargetFrameworkMoniker fxId)
 		{
-			// FIXME: this is a hack which should really be done using the xml definitions for each .NETPortable profile
-			if (fxId.Identifier == ".NETPortable" && fxId.Version == "4.0")
-				return HackyCheckForPLPCompatibility (fxId);
+			return CanReferenceAssembliesTargetingFramework (fxId);
+		}
 
-			return fxId.Identifier == this.id.Identifier
-				&& new Version (fxId.Version).CompareTo (new Version (this.id.Version)) <= 0;
+		public bool CanReferenceAssembliesTargetingFramework (TargetFrameworkMoniker fxId)
+		{
+			var fx = Runtime.SystemAssemblyService.GetTargetFramework (fxId);
+
+			return fx != null && CanReferenceAssembliesTargetingFramework (fx);
+		}
+
+		/// <summary>
+		/// Determines whether projects targeting this framework can reference assemblies targeting the framework specified by fx.
+		/// </summary>
+		/// <returns><c>true</c> if projects targeting this framework can reference assemblies targeting the framework specified by fx; otherwise, <c>false</c>.</returns>
+		/// <param name="fx">The target framework</param>
+		public bool CanReferenceAssembliesTargetingFramework (TargetFramework fx)
+		{
+			foreach (var sfx in fx.SupportedFrameworks) {
+				if (sfx.Identifier != id.Identifier)
+					continue;
+
+				if (!ProfileMatchesPattern (id.Profile, sfx.Profile))
+					continue;
+
+				var version = new Version (id.Version);
+
+				if (version >= sfx.MinimumVersion && version <= sfx.MaximumVersion)
+					return true;
+			}
+
+			// FIXME: this is a hack for systems w/o Portable Class Library definitions
+			if (fx.Id.Identifier == TargetFrameworkMoniker.ID_PORTABLE) {
+				switch (id.Identifier) {
+				case TargetFrameworkMoniker.ID_NET_FRAMEWORK:
+					return new Version (fx.Id.Version).CompareTo (new Version (id.Version)) <= 0;
+				case TargetFrameworkMoniker.ID_MONOTOUCH:
+				case TargetFrameworkMoniker.ID_MONODROID:
+					return true;
+				}
+			}
+
+			return fx.Id.Identifier == id.Identifier && new Version (fx.Id.Version).CompareTo (new Version (id.Version)) <= 0;
 		}
 		
 		internal string GetCorlibVersion ()
@@ -241,7 +267,7 @@ namespace MonoDevelop.Core.Assemblies
 			return new TargetFrameworkMoniker (id.Identifier, version);	
 		}
 		
-		public List<Framework> SupportedFrameworks {
+		public List<SupportedFramework> SupportedFrameworks {
 			get { return supportedFrameworks; }
 		}
 		
@@ -291,6 +317,9 @@ namespace MonoDevelop.Core.Assemblies
 					case "4.0":
 						fx.clrVersion = ClrVersion.Net_4_0;
 						break;
+					case "4.5":
+						fx.clrVersion = ClrVersion.Net_4_5;
+						break;
 					default:
 						throw new Exception ("Unknown RuntimeVersion '" + runtimeVersion + "'");
 					}
@@ -307,6 +336,9 @@ namespace MonoDevelop.Core.Assemblies
 						break;
 					case "4.0":
 						fx.toolsVersion = TargetFrameworkToolsVersion.V4_0;
+						break;
+					case "4.5":
+						fx.toolsVersion = TargetFrameworkToolsVersion.V4_5;
 						break;
 					default:
 						throw new Exception ("Unknown ToolsVersion '" + runtimeVersion + "'");
@@ -351,6 +383,9 @@ namespace MonoDevelop.Core.Assemblies
 							ainfo.InGac = reader.ReadContentAsBoolean ();
 					} while (reader.ReadToFollowing ("File"));
 				} else {
+
+					// HACK: we were using EnumerateFiles but it's broken in some Mono releases
+					// https://bugzilla.xamarin.com/show_bug.cgi?id=2975
 					var files = System.IO.Directory.GetFiles (dir, "*.dll");
 					foreach (var f in files) {
 						try {
@@ -370,8 +405,8 @@ namespace MonoDevelop.Core.Assemblies
 			
 			var supportedFrameworksDir = dir.Combine ("SupportedFrameworks");
 			if (Directory.Exists (supportedFrameworksDir)) {
-				foreach (var sfx in Directory.EnumerateFiles (supportedFrameworksDir))
-					fx.SupportedFrameworks.Add (Framework.Load (fx, sfx));
+				foreach (var sfx in Directory.GetFiles (supportedFrameworksDir))
+					fx.SupportedFrameworks.Add (SupportedFramework.Load (fx, sfx));
 			}
 			
 			return fx;
@@ -444,5 +479,6 @@ namespace MonoDevelop.Core.Assemblies
 		V2_0,
 		V3_5,
 		V4_0,
+		V4_5
 	}
 }
